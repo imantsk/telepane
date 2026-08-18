@@ -6,7 +6,7 @@ semantic versioning.
 
 ## [Unreleased]
 
-## [0.1.0]
+## [0.9.2] - 2026-08-18
 
 Initial release.
 
