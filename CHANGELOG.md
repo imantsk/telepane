@@ -6,6 +6,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-08-18
+
+- Live markdown preview in the send box: completed fences render as rules
+  with the language tag, bold/underline/italic/strike/inline-code/links
+  render styled with markers concealed, headings hide their markers, and
+  `---` renders as a rule. The cursor line and any broken syntax show raw
+  text.
+- Style fenced-code content and the fence language tag in the highlighter.
+- Fix `send_text` so a message that ends with `;` keeps its last character.
+
 ## [0.9.4] - 2026-08-18
 
 - Rewrite the readme and refresh the PyPI project page.

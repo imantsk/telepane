@@ -387,6 +387,10 @@ def server_info(sessions: list[Session] | None = None) -> dict[str, str]:
 
 def send_text(pane_target: str, text: str, *, enter: bool = True) -> None:
     """Send `text` literally to `pane_target`, optionally pressing Enter."""
+    # tmux parses a trailing unescaped ";" in any argument as a command
+    # separator, even in argv mode. Escape it or the last character is lost.
+    if text.endswith(";"):
+        text = text[:-1] + "\\;"
     if text and enter:
         _run(
             [

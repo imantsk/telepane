@@ -75,6 +75,16 @@ def test_send_text_builds_literal_argv(monkeypatch):
     ]
 
 
+def test_send_text_escapes_trailing_semicolon(monkeypatch):
+    calls = []
+    monkeypatch.setattr(tmux.subprocess, "run", lambda args, **kw: calls.append(args) or Dummy(""))
+    tmux.send_text("%3", "phpinfo();", enter=False)
+    assert calls[0][-1] == "phpinfo()\\;"
+    calls.clear()
+    tmux.send_text("%3", "a;b;c", enter=False)
+    assert calls[0][-1] == "a;b;c"
+
+
 def test_send_text_no_enter_single_call(monkeypatch):
     calls = []
     monkeypatch.setattr(tmux.subprocess, "run", lambda args, **kw: calls.append(args) or Dummy(""))

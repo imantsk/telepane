@@ -6,7 +6,10 @@ from __future__ import annotations
 from textual import events
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
+from textual.strip import Strip
 from textual.widgets import Button, Label, Switch, TextArea
+
+from . import md_render
 
 
 class MessageArea(TextArea):
@@ -16,10 +19,73 @@ class MessageArea(TextArea):
         pass
 
     def set_markdown(self, enabled: bool) -> None:
+        if enabled:
+            self._extend_markdown_query()
         try:
             self.language = "markdown" if enabled else None
         except Exception:
             self.language = None
+
+    def _extend_markdown_query(self) -> None:
+        # The builtin query leaves fence content on @none and @text.literal,
+        # which no TextArea theme styles. Remap to styled captures.
+        if getattr(self, "_md_query_extended", False):
+            return
+        try:
+            from textual.widgets._text_area import _HIGHLIGHTS_PATH
+
+            query = (_HIGHLIGHTS_PATH / "markdown.scm").read_text()
+            query = query.replace("(code_fence_content) @none", "(code_fence_content) @string")
+            query += "\n(language) @keyword\n"
+            self.update_highlight_query("markdown", query)
+            self._md_query_extended = True
+        except Exception:
+            pass
+
+    def render_line(self, y: int) -> Strip:
+        strip = super().render_line(y)
+        try:
+            return self._md_preview(y, strip)
+        except Exception:
+            return strip
+
+    def _md_preview(self, y: int, strip: Strip) -> Strip:
+        """Visual-only markdown preview. Source text and coordinates stay
+        untouched; the cursor line and any broken syntax render as raw text."""
+        if self.language != "markdown" or not self.text or self.show_line_numbers:
+            return strip
+        _, scroll_y = self.scroll_offset
+        info = self.wrapped_document._offset_to_line_info
+        y_offset = y + scroll_y
+        if y_offset >= len(info):
+            return strip
+        line_index, section = info[y_offset]
+        if section > 0 or len(self.wrapped_document._line_index_to_offsets[line_index]) > 1:
+            return strip
+        if self.cursor_location[0] == line_index:
+            return strip
+        selection = self.selection
+        if selection.start != selection.end:
+            low, high = sorted((selection.start[0], selection.end[0]))
+            if low <= line_index <= high:
+                return strip
+        lines = self.document.lines
+        fences = md_render.fence_map(lines)
+        if line_index in md_render.fence_interior(fences):
+            return strip
+        width = strip.cell_length
+        if line_index in fences:
+            text = md_render.rule_text(width, fences[line_index] or "")
+        else:
+            transformed = md_render.transform_line(lines[line_index])
+            if transformed is None:
+                return strip
+            if md_render.is_hrule(lines[line_index]):
+                transformed = md_render.rule_text(width)
+            text = transformed
+        base = self.rich_style
+        segments = list(text.render(self.app.console))
+        return Strip(segments, text.cell_len).adjust_cell_length(width, base).apply_style(base)
 
     async def _on_key(self, event: events.Key) -> None:
         if event.key == "enter":
