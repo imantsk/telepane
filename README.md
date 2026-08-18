@@ -95,7 +95,7 @@ with telepane: click the pane, type, press Enter.
 
 ```bash
 claude plugin marketplace add imantsk/telepane
-# then inside claude: /plugin install telepane@telepane
+# then inside claude: /plugin install telepane
 ```
 
 ## Why not just switch panes?
