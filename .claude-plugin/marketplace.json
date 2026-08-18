@@ -1,0 +1,16 @@
+{
+  "name": "telepane",
+  "owner": {
+    "name": "imantsk"
+  },
+  "metadata": {
+    "description": "Transparent agent pairing over tmux with the telepane dashboard."
+  },
+  "plugins": [
+    {
+      "name": "telepane",
+      "source": "./",
+      "description": "Transparent agent pairing over tmux, with the telepane dashboard as the owner's mouse-first control surface."
+    }
+  ]
+}

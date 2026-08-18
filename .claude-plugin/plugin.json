@@ -1,0 +1,9 @@
+{
+  "name": "telepane",
+  "version": "0.1.0",
+  "description": "Transparent agent pairing over tmux: spawn worker agents in visible panes, drive them from your session, and teach the owner to steer any of them with the telepane dashboard.",
+  "author": {
+    "name": "imantsk"
+  },
+  "keywords": ["tmux", "telepane", "multi-agent", "pairing", "multiplexer", "orchestration"]
+}

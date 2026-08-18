@@ -81,6 +81,23 @@ key submits the message in that pane.
 
 Telepane saves settings to `~/.config/telepane/config.json`.
 
+## Pair with your agent
+
+You do not have to set any of this up yourself. Tell your coding agent:
+
+> Install telepane from pip and set me up for agent pairing.
+
+The repo ships a Claude Code plugin with an `agent-pairing` skill. The skill
+teaches the agent the full workflow: terminal and tmux setup, worker agents in
+side panes (claude, codex, gemini, copilot, opencode, cursor-agent, and
+others), briefing, and teardown. You steer any of those agents mid-session
+with telepane: click the pane, type, press Enter.
+
+```bash
+claude plugin marketplace add imantsk/telepane
+# then inside claude: /plugin install telepane@telepane
+```
+
 ## Why not just switch panes?
 
 You can. But you sometimes control several agents across many panes. One control

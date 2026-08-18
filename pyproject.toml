@@ -51,7 +51,14 @@ path = "src/telepane/__init__.py"
 packages = ["src/telepane"]
 
 [tool.hatch.build.targets.sdist]
-exclude = [".cursor", "CLAUDE.md", "AGENTS.md", ".github/copilot-instructions.md"]
+exclude = [
+    ".cursor",
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".github/copilot-instructions.md",
+    ".claude-plugin",
+    "skills",
+]
 
 [tool.ruff]
 line-length = 100
