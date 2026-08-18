@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "telepane"
+dynamic = ["version"]
+description = "Mouse-driven tmux control dashboard. Type into any pane from one place"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "imantsk", email = "imants.kokis@gmail.com" }]
+keywords = ["tmux", "tui", "textual", "terminal", "send-keys", "dashboard", "panes"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Terminals",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "textual>=8,<9",
+    "textual[syntax]>=8,<9; python_version >= '3.10'",
+]
+
+[project.urls]
+Homepage = "https://github.com/imantsk/telepane"
+Repository = "https://github.com/imantsk/telepane"
+Issues = "https://github.com/imantsk/telepane/issues"
+Changelog = "https://github.com/imantsk/telepane/blob/main/CHANGELOG.md"
+
+[project.scripts]
+telepane = "telepane.cli:main"
+
+[project.optional-dependencies]
+png = ["cairosvg>=2.7"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "textual-dev>=1.5", "ruff>=0.6", "watchfiles>=0.24"]
+
+[tool.hatch.version]
+path = "src/telepane/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/telepane"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [".cursor", "CLAUDE.md", "AGENTS.md", ".github/copilot-instructions.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

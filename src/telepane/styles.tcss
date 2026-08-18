@@ -1,0 +1,179 @@
+#main {
+    height: 1fr;
+}
+
+#left {
+    width: 40;
+}
+
+#resizer, #resizer-y {
+    color: $text-disabled;
+    overflow: hidden;
+}
+
+#resizer {
+    width: 1;
+    height: 1fr;
+}
+
+#resizer-y {
+    height: 1;
+    width: 1fr;
+}
+
+#resizer:hover, #resizer-y:hover {
+    color: white;
+}
+
+#tree {
+    padding: 0 1;
+}
+
+#right {
+    width: 1fr;
+}
+
+.panel {
+    height: auto;
+    padding: 0 1;
+    border-bottom: solid $panel;
+}
+
+/* No separator under the 2nd header: the ┄ divider takes its place, letting the
+   send box expand one line higher (right up to the status bar). */
+#target-info {
+    border-bottom: none;
+}
+
+#preview-wrap {
+    height: 1fr;
+    min-height: 0;
+    padding: 0 1;
+}
+
+#preview {
+    padding: 0 1;
+    color: $text-muted;
+}
+
+#sendbox {
+    height: 10;
+    padding: 0 1;
+}
+
+#send-input {
+    height: 1fr;
+    border: round $accent;
+}
+
+#send-controls {
+    height: auto;
+    align: right middle;
+    padding-top: 1;
+}
+
+#send-nl-label {
+    padding: 1 1 0 1;
+}
+
+#send-send-label {
+    padding: 1 1 0 1;
+}
+
+#send-controls Button {
+    margin-left: 2;
+}
+
+TextPrompt, Confirm, Help {
+    align: center middle;
+}
+
+#dialog {
+    width: 60;
+    height: auto;
+    border: thick $primary;
+    background: $surface;
+    padding: 1 2;
+}
+
+.dialog-title {
+    padding-bottom: 1;
+    text-style: bold;
+}
+
+.dialog-buttons {
+    height: auto;
+    align: right middle;
+    padding-top: 1;
+}
+
+.dialog-buttons Button {
+    margin-left: 2;
+}
+
+.setting-row {
+    height: auto;
+    align: left middle;
+    margin-bottom: 1;
+}
+
+.setting-row Label {
+    height: 3;
+    content-align: left middle;
+    padding: 0 0 0 1;
+}
+
+.setting-label {
+    padding: 1 1;
+}
+
+#help-list {
+    height: auto;
+    max-height: 20;
+    padding: 0 1;
+}
+
+/* Settings screen */
+#settings-topbar {
+    height: 3;
+    background: $panel;
+}
+
+#settings-back {
+    min-width: 6;
+    width: 6;
+    margin: 0 1;
+}
+
+#settings-title {
+    padding: 1 0;
+    text-style: bold;
+}
+
+#settings-body {
+    height: 1fr;
+}
+
+#settings-nav {
+    width: 26;
+    border-right: solid $primary;
+}
+
+#settings-fields {
+    width: 1fr;
+    padding: 1 2;
+}
+
+#settings-fields Input {
+    width: 40;
+}
+
+.field-block {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.field-label {
+    text-style: bold;
+    padding-top: 1;
+}

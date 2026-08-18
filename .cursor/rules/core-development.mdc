@@ -1,0 +1,14 @@
+---
+description: Core development doctrine for telepane
+alwaysApply: true
+---
+
+- **Never build shell command strings.** Every tmux call goes through
+  `tmux._run([...argv])`; no `shell=True`, no string interpolation into commands.
+- **Target tmux objects by id** (`$`/`@`/`%`), never by name.
+- **All environment access lives in `config.py`.** Nowhere else reads env vars.
+- **Never launch the TUI in the working pane**. Use `App.run_test()` or a
+  separate tmux pane.
+- Search and reuse before adding; smallest change at the root cause.
+
+Full rules: `AGENTS.md`.

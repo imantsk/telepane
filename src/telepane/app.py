@@ -1,0 +1,427 @@
+"""telepane: mouse-driven tmux control dashboard."""
+
+from __future__ import annotations
+
+from textual import work
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.command import DiscoveryHit, Hit, Provider
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.widgets import Footer, Header, Static, Tree
+
+from . import screenshot, tmux
+from .config import Config, home_dir
+from .widgets.info import render_server, render_target
+from .widgets.modals import Confirm, Help, TextPrompt
+from .widgets.resizer import Resizer
+from .widgets.send_box import SendBox
+from .widgets.settings_screen import SettingsScreen
+from .widgets.tree import (
+    KIND_PANE,
+    KIND_SESSION,
+    KIND_WINDOW,
+    NodeRef,
+    build_tree,
+    refresh_labels,
+)
+
+_MIN_SIDEBAR = 20
+_MIN_SEND = 6
+_SEND_MAX = 100_000
+
+
+class _MenuCommands(Provider):
+    """Command palette entries, fixed order."""
+
+    def _items(self):
+        app = self.screen.app
+        return [
+            ("Settings", "Open settings", app.action_settings),
+            ("Screenshot", "Take a screenshot", app.action_screenshot),
+            ("Help", "Show key bindings", app.action_help),
+            ("Quit", "Quit Telepane", app.action_quit),
+        ]
+
+    async def discover(self):
+        for title, help_, callback in self._items():
+            yield DiscoveryHit(title, callback, help=help_)
+
+    async def search(self, query: str):
+        matcher = self.matcher(query)
+        for title, help_, callback in self._items():
+            score = matcher.match(title)
+            if score > 0:
+                yield Hit(score, matcher.highlight(title), callback, help=help_)
+
+
+class TelepaneApp(App[None]):
+    CSS_PATH = "styles.tcss"
+    TITLE = "Telepane"
+    COMMANDS = {_MenuCommands}
+
+    BINDINGS = [
+        Binding("ctrl+s", "send", "Send"),
+        Binding("r", "refresh", "Refresh"),
+        Binding("n", "new_session", "New"),
+        Binding("R", "rename", "Rename"),
+        Binding("k", "kill", "Kill"),
+        Binding("s", "split_h", "Split →"),
+        Binding("v", "split_v", "Split ↓"),
+        Binding("p", "screenshot", "Screenshot"),
+        Binding("comma", "settings", "Settings"),
+        Binding("question_mark", "help", "Help"),
+        Binding("f", "focus_tree", "Tree"),
+        Binding("i", "focus_input", "Input"),
+        Binding("q", "quit", "Quit"),
+    ]
+
+    def __init__(self, config: Config | None = None) -> None:
+        super().__init__()
+        self.config = config or Config.load()
+        self.selected: NodeRef | None = None
+        self._panes: dict[str, tmux.Pane] = {}
+        self._struct: tuple = ()
+        self._sizes: tuple = ()
+        self._stats_cache = ""
+        self._home = home_dir()
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        with Horizontal(id="main"):
+            with VerticalScroll(id="left"):
+                yield Tree("tmux", id="tree")
+            yield Resizer("#left", key="sidebar", min_size=_MIN_SIDEBAR, id="resizer")
+            with Vertical(id="right"):
+                yield Static(id="server-stats", classes="panel")
+                yield Static(id="target-info", classes="panel")
+                with VerticalScroll(id="preview-wrap"):
+                    yield Static(id="preview")
+                yield Resizer("#sendbox", key="send", axis="y", min_size=_MIN_SEND, id="resizer-y")
+                yield SendBox(id="sendbox")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        if self.config.theme in self.available_themes:
+            self.theme = self.config.theme
+        self.query_one(SendBox).set_enter_sends(self.config.enter_sends)
+        self.query_one(SendBox).set_md_highlight(self.config.md_highlight)
+        tree = self.query_one("#tree", Tree)
+        tree.guide_depth = 3
+        tree.show_root = False
+        self.refresh_data()
+        self._timer = self.set_interval(self.config.poll_interval, self._tick)
+        self.call_after_refresh(self._apply_saved_sizes)
+
+    @property
+    def _main(self):
+        return self.screen_stack[0]
+
+    def apply_config_live(self) -> None:
+        """Re-apply saved settings live."""
+        send = self._main.query_one(SendBox)
+        send.set_enter_sends(self.config.enter_sends)
+        send.set_md_highlight(self.config.md_highlight)
+        self._clamp_sidebar()
+        self._clamp_send_box()
+        self._timer.stop()
+        self._timer = self.set_interval(self.config.poll_interval, self._tick)
+
+    def _apply_saved_sizes(self) -> None:
+        self._clamp_sidebar()
+        self._clamp_send_box()
+
+    def _clamp_sidebar(self) -> None:
+        try:
+            widget = self._main.query_one("#left")
+        except Exception:
+            return
+        max_w = max(_MIN_SIDEBAR, self.size.width - _MIN_SIDEBAR)
+        widget.styles.width = max(_MIN_SIDEBAR, min(self.config.sidebar_width, max_w))
+
+    def _clamp_send_box(self) -> None:
+        try:
+            resizer = self._main.query_one("#resizer-y", Resizer)
+        except Exception:
+            return
+        height = max(_MIN_SEND, min(self.config.send_height, resizer.max_height()))
+        resizer.apply_height(height)
+
+    def on_resize(self, event) -> None:
+        self._clamp_sidebar()
+        self._clamp_send_box()
+
+    def on_app_blur(self, event) -> None:
+        if hasattr(self, "_timer"):
+            self._timer.pause()
+
+    def on_app_focus(self, event) -> None:
+        if hasattr(self, "_timer"):
+            self._timer.resume()
+            self._tick()
+
+    def on_resizer_committed(self, event: Resizer.Committed) -> None:
+        if event.key == "sidebar":
+            self.config.sidebar_width = event.size
+        elif event.key == "send":
+            resizer = self.query_one("#resizer-y", Resizer)
+            maxed = event.size >= resizer.max_height()
+            self.config.send_height = _SEND_MAX if maxed else event.size
+        self.config.save()
+
+    # ── data ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _struct_sig(sessions: list[tmux.Session]) -> tuple:
+        return tuple(
+            (
+                s.id,
+                s.name,
+                s.attached,
+                tuple(
+                    (w.id, w.name, w.active, tuple((p.id, p.command, p.active) for p in w.panes))
+                    for w in s.windows
+                ),
+            )
+            for s in sessions
+        )
+
+    @staticmethod
+    def _size_sig(sessions: list[tmux.Session]) -> tuple:
+        return tuple(
+            (p.id, p.width, p.height) for s in sessions for w in s.windows for p in w.panes
+        )
+
+    def _gather(self):
+        """All blocking tmux reads for one refresh."""
+        sessions = tmux.snapshot()
+        info = tmux.server_info(sessions)
+        preview = None
+        if self.selected is not None:
+            try:
+                preview = tmux.capture_pane(self.selected.send_target)
+            except tmux.TmuxError:
+                preview = ""
+        return sessions, info, preview
+
+    def refresh_data(self) -> None:
+        try:
+            data = self._gather()
+        except Exception:
+            return
+        self._render(*data, force=True)
+
+    @work(exclusive=True, thread=True)
+    def _poll(self) -> None:
+        try:
+            data = self._gather()
+        except Exception:
+            return
+        self.call_from_thread(self._render, *data)
+
+    def _tick(self) -> None:
+        self._poll()
+
+    def _render(self, sessions, info, preview, *, force: bool = False) -> None:
+        try:
+            tree: Tree[NodeRef] = self.query_one("#tree", Tree)
+            struct = self._struct_sig(sessions)
+            if force or struct != self._struct:
+                self._panes = {p.id: p for s in sessions for w in s.windows for p in w.panes}
+                if sessions:
+                    build_tree(tree, sessions)
+                else:
+                    tree.clear()
+                self._struct = struct
+                self._sizes = self._size_sig(sessions)
+                self._refresh_target()
+            elif (size := self._size_sig(sessions)) != self._sizes:
+                self._panes = {p.id: p for s in sessions for w in s.windows for p in w.panes}
+                refresh_labels(tree, sessions)
+                self._sizes = size
+                self._refresh_target()
+            stats = render_server(info)
+            if stats != self._stats_cache:
+                self.query_one("#server-stats", Static).update(stats)
+                self._stats_cache = stats
+            self._set_preview(preview)
+        except Exception:
+            pass
+
+    def _set_preview(self, text: str | None) -> None:
+        try:
+            widget = self.query_one("#preview", Static)
+        except Exception:
+            return
+        if not self.selected:
+            widget.update("[dim]No target is selected.[/]")
+        elif text is None:
+            widget.update("[dim]target unavailable[/]")
+        else:
+            tail = "\n".join(text.splitlines()[-self.config.preview_lines :])
+            widget.update(tail or "[dim](empty pane)[/]")
+
+    def _refresh_target(self) -> None:
+        info = self.query_one("#target-info", Static)
+        pane = self._panes.get(self.selected.send_target) if self.selected else None
+        info.update(
+            render_target(self.selected, pane, width=info.size.width or 80, home=self._home)
+        )
+        self.call_after_refresh(self._clamp_send_box)
+
+    def _refresh_preview(self) -> None:
+        if not self.selected:
+            self._set_preview(None)
+            return
+        try:
+            self._set_preview(tmux.capture_pane(self.selected.send_target))
+        except tmux.TmuxError:
+            self._set_preview(None)
+
+    # ── events ───────────────────────────────────────────────────────────
+
+    def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
+        ref = event.node.data
+        if isinstance(ref, NodeRef):
+            self.selected = ref
+            self._refresh_target()
+            self._refresh_preview()
+
+    def on_send_box_send(self, event: SendBox.Send) -> None:
+        if self.selected is None:
+            self.notify("Select a pane in the tree first.", severity="warning")
+            return
+        if not event.text:
+            self.notify("The message is empty.", severity="warning")
+            return
+        try:
+            tmux.send_text(self.selected.send_target, event.text, enter=True)
+        except Exception as exc:
+            self.notify(f"Cannot send: {exc}", severity="error")
+            return
+        self.notify(f"Message sent to {self.selected.send_target}.")
+        self.query_one(SendBox).clear()
+        self.set_timer(0.15, self._refresh_preview)
+
+    def on_send_box_mode_changed(self, event: SendBox.ModeChanged) -> None:
+        self.config.enter_sends = event.enter_sends
+        self.config.save()
+
+    # ── actions ──────────────────────────────────────────────────────────
+
+    def action_send(self) -> None:
+        self.query_one(SendBox).trigger_send()
+
+    def action_refresh(self) -> None:
+        self.refresh_data()
+
+    def action_focus_tree(self) -> None:
+        self.query_one("#tree", Tree).focus()
+
+    def action_focus_input(self) -> None:
+        self.query_one("#send-input").focus()
+
+    def action_new_session(self) -> None:
+        def done(name: str | None) -> None:
+            if not name:
+                return
+            try:
+                tmux.new_session(name)
+            except tmux.TmuxError as exc:
+                self.notify(f"Cannot create the session: {exc}", severity="error")
+                return
+            self.refresh_data()
+
+        self.push_screen(TextPrompt("New session name"), done)
+
+    def action_rename(self) -> None:
+        ref = self.selected
+        if ref is None or ref.kind == KIND_PANE:
+            self.notify("Select a session or a window to rename.", severity="warning")
+            return
+
+        def done(name: str | None) -> None:
+            if not name:
+                return
+            try:
+                if ref.kind == KIND_SESSION:
+                    tmux.rename_session(ref.target, name)
+                else:
+                    tmux.rename_window(ref.target, name)
+            except tmux.TmuxError as exc:
+                self.notify(f"Cannot rename: {exc}", severity="error")
+                return
+            self.refresh_data()
+
+        self.push_screen(TextPrompt(f"Rename {ref.kind}", ref.label), done)
+
+    def action_kill(self) -> None:
+        ref = self.selected
+        if ref is None:
+            self.notify("No target is selected.", severity="warning")
+            return
+
+        def do_kill() -> None:
+            try:
+                if ref.kind == KIND_SESSION:
+                    tmux.kill_session(ref.target)
+                elif ref.kind == KIND_WINDOW:
+                    tmux.kill_window(ref.target)
+                else:
+                    tmux.kill_pane(ref.target)
+            except tmux.TmuxError as exc:
+                self.notify(f"Cannot kill: {exc}", severity="error")
+                return
+            self.selected = None
+            self.refresh_data()
+
+        if self.config.confirm_kill:
+
+            def confirmed(yes: bool) -> None:
+                if yes:
+                    do_kill()
+
+            self.push_screen(Confirm(f"Kill {ref.kind} {ref.label}?"), confirmed)
+        else:
+            do_kill()
+
+    def _split(self, horizontal: bool) -> None:
+        if self.selected is None:
+            self.notify("No target is selected.", severity="warning")
+            return
+        try:
+            tmux.split_window(self.selected.send_target, horizontal=horizontal)
+        except tmux.TmuxError as exc:
+            self.notify(f"Cannot split: {exc}", severity="error")
+            return
+        self.refresh_data()
+
+    def action_split_h(self) -> None:
+        self._split(horizontal=True)
+
+    def action_split_v(self) -> None:
+        self._split(horizontal=False)
+
+    def action_settings(self) -> None:
+        self.push_screen(SettingsScreen(self.config))
+
+    def action_help(self) -> None:
+        self.push_screen(Help(self.BINDINGS))
+
+    def action_screenshot(self) -> None:
+        preview = ""
+        if self.selected:
+            try:
+                preview = tmux.capture_pane(self.selected.send_target)
+            except tmux.TmuxError:
+                preview = ""
+        try:
+            svg = self.export_screenshot()
+        except Exception as exc:
+            self.notify(f"Cannot take the screenshot: {exc}", severity="error")
+            return
+        self._deliver_screenshot(svg, preview)
+
+    @work(thread=True)
+    def _deliver_screenshot(self, svg: str, preview: str) -> None:
+        msg = screenshot.deliver(svg, preview, self.config, home=self._home)
+        self.call_from_thread(self.notify, msg)

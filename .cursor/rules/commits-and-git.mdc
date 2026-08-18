@@ -1,0 +1,14 @@
+---
+description: Commit message and git workflow convention
+alwaysApply: true
+---
+
+Single-line Conventional Commits. Exactly one prefix from: `feat:`, `fix:`,
+`chore:`, `docs:`.
+
+- **No scope in parentheses.** NOT `feat(tmux): …`. Just `feat: …`.
+- **No body. No trailers. No `Co-Authored-By`.**
+- Imperative mood, lowercase after the colon. One logical change per commit.
+- Never push, open PRs, or merge without explicit human confirmation.
+
+Full rules: `AGENTS.md`.
