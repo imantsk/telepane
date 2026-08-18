@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label
 
 
-class TextPrompt(ModalScreen[str | None]):
+class TextPrompt(ModalScreen[Optional[str]]):
     BINDINGS = [("escape", "cancel", "Cancel")]
 
     def __init__(self, title: str, initial: str = "") -> None:
