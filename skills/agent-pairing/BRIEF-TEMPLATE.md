@@ -13,8 +13,8 @@ Placeholders: %0 = driver pane, %1 = worker pane. Fill in the real ids from
 
 - `<repo>/CLAUDE.md` and `<repo>/AGENTS.md`; AGENTS.md is the source of truth
   for workflow.
-- Trust the code, not the docs. `docs/` may describe things that were never
-  built or have since changed.
+- Trust the code, not the docs. `docs/` can describe features that do not
+  exist or are stale.
 - Check what already exists before building anything.
 
 ## 1. tmux comms
@@ -29,10 +29,10 @@ Placeholders: %0 = driver pane, %1 = worker pane. Fill in the real ids from
   tmux send-keys -t %0 Enter
   ```
 - Prefix every message with `AGENT:` so the driver knows the source.
-- Use it when you would otherwise stall or guess: a decision that is
+- Use it when the alternative is to stall or to guess: a decision that is
   genuinely the driver's or the owner's, a contradiction between code and
   docs, a blocked command, a driver instruction that turns out to be wrong,
-  or anything where proceeding on an assumption would waste work.
+  or any point where an assumption wastes work.
 - Do **not** use it for routine progress. That goes in your normal replies.
 - Do not go silent on a blocker.
 

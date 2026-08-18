@@ -1,6 +1,6 @@
 # Failure modes
 
-Every entry here was observed in a real pairing session, not imagined.
+Every entry here comes from a real pairing session, not from theory.
 
 ## Pane index drift
 
@@ -35,8 +35,8 @@ was to *delete* the uncommitted red tests it was supposed to make pass.
 ## Silent worker
 
 **Symptom:** long busy period, no output, no questions.
-**Cause:** the brief never told it a back-channel existed, or told it only
-once in an early session that has since compacted.
+**Cause:** the brief never told it a back-channel exists, or told it only
+once in an early session that compacted since.
 **Fix:** put the back-channel in the **brief file**, not in a chat message.
 Re-briefing a fresh worker then re-establishes it automatically.
 

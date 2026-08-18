@@ -23,7 +23,7 @@ exists before building.
 crucially, *when* to use it. "Ask if unsure" produces nothing. Enumerate the
 triggers: a decision that is genuinely yours or the owner's, a contradiction
 between code and docs, a blocked command, an instruction of yours that turns
-out to be wrong, anything where guessing would waste work. Then rule out the
+out to be wrong, any point where a guess wastes work. Then rule out the
 opposite: routine progress goes in normal replies, not the back-channel.
 
 **2. House rules.** In a bypass mode this section *is* the safety system.

@@ -1,7 +1,7 @@
 # tmux setup for agent panes
 
-Driving an agent TUI over tmux needs a few settings beyond the defaults. None
-of them is taste; each fixes a concrete failure you will otherwise hit.
+Agent TUIs over tmux need a few settings beyond the defaults. None of them is
+taste; each one prevents a concrete failure.
 
 Add to `~/.tmux.conf`, then `tmux source-file ~/.tmux.conf`:
 
@@ -28,11 +28,11 @@ set -g set-clipboard on
 | `focus-events on` | TUIs render stale after you click between panes if they never learn focus changed. |
 | `set-clipboard on` | Copy-mode selections reach the system clipboard via OSC52. |
 
-## Scrolling a worker pane
+## Scroll a worker pane
 
-A redrawing worker TUI grabs the mouse while it renders, so the wheel does
-nothing over it. Scroll it through copy mode instead: `Ctrl-b [`, then wheel
-or PageUp, then `q` to return to live.
+A worker TUI grabs the mouse while it renders, so the wheel does nothing over
+it. Scroll it through copy mode instead: `Ctrl-b [`, then the wheel or
+PageUp, then `q` to return to live.
 
 ## iTerm2 notes
 
