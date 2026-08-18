@@ -59,7 +59,9 @@ src/telepane/
   config.py      the ONLY env boundary. Loads/saves ~/.config/telepane/config.json
   app.py         Textual App: layout, timers, actions, message wiring
   cli.py         argparse entry point (`telepane`), preflight checks
-  widgets/       tree.py, send_box.py, info.py, modals.py. UI only, no tmux logic
+  widgets/       tree.py, send_box.py, md_render.py, info.py, modals.py. UI only
+  clipboard.py   argv-only clipboard boundary
+  browser.py     argv-only browser boundary (link opening, browser discovery)
   styles.tcss    Textual CSS
 tests/           mirror src units; test_live.py gated by TELEPANE_LIVE_TESTS
 ```
@@ -105,8 +107,10 @@ persist secrets (this tool has none. Keep it that way).
 
 ## Architecture invariants
 
-- **The tmux seam**: every external call is `tmux._run([...])`. Callers use the
-  typed helpers in `tmux.py`; no other module imports `subprocess`.
+- **The tmux seam**: every tmux call is `tmux._run([...])`. Callers use the
+  typed helpers in `tmux.py`. The only other subprocess boundaries are
+  `clipboard.py` and `browser.py`, argv-only like the tmux seam. No other
+  module imports `subprocess`.
 - **Id targeting**: see Rule 1.
 - **UI holds no tmux logic**: `widgets/` render and emit messages; `app.py`
   translates messages into `tmux` calls.

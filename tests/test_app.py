@@ -263,3 +263,64 @@ async def test_send_height_resize_persists_to_config(mocked, monkeypatch, tmp_pa
         app.query_one("#resizer-y", Resizer).post_message(Resizer.Committed("send", 12))
         await pilot.pause()
         assert app.config.send_height == 12
+
+
+@pytest.mark.asyncio
+async def test_shift_click_link_opens_browser(mocked, monkeypatch):
+    from telepane import browser as browser_mod
+    from telepane.widgets.send_box import MessageArea
+
+    opened = []
+    monkeypatch.setattr(browser_mod, "open_url", lambda url, b="": opened.append((url, b)))
+    app = TelepaneApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        area = app.query_one("#send-input", MessageArea)
+        area.text = "see [docs](https://example.com)\n"
+        area.cursor_location = (1, 0)
+        await pilot.pause()
+        await pilot.click(MessageArea, offset=(6, 0), shift=True)
+        await pilot.pause()
+        for _ in range(20):
+            if opened:
+                break
+            await pilot.pause(0.05)
+    assert opened == [("https://example.com", "")]
+
+
+@pytest.mark.asyncio
+async def test_plain_click_does_not_open(mocked, monkeypatch):
+    from telepane import browser as browser_mod
+    from telepane.widgets.send_box import MessageArea
+
+    opened = []
+    monkeypatch.setattr(browser_mod, "open_url", lambda url, b="": opened.append(url))
+    app = TelepaneApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        area = app.query_one("#send-input", MessageArea)
+        area.text = "see [docs](https://example.com)\n"
+        area.cursor_location = (1, 0)
+        await pilot.pause()
+        await pilot.click(MessageArea, offset=(6, 0))
+        await pilot.pause()
+    assert opened == []
+
+
+@pytest.mark.asyncio
+async def test_shift_click_disabled_by_setting(mocked, monkeypatch):
+    from telepane import browser as browser_mod
+    from telepane.config import Config
+    from telepane.widgets.send_box import MessageArea
+
+    opened = []
+    monkeypatch.setattr(browser_mod, "open_url", lambda url, b="": opened.append(url))
+    config = Config()
+    config.open_links = False
+    app = TelepaneApp(config=config)
+    async with app.run_test(size=(100, 40)) as pilot:
+        area = app.query_one("#send-input", MessageArea)
+        area.text = "see [docs](https://example.com)\n"
+        area.cursor_location = (1, 0)
+        await pilot.pause()
+        await pilot.click(MessageArea, offset=(6, 0), shift=True)
+        await pilot.pause()
+    assert opened == []

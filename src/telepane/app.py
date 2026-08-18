@@ -9,12 +9,12 @@ from textual.command import DiscoveryHit, Hit, Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Static, Tree
 
-from . import screenshot, tmux
+from . import browser, screenshot, tmux
 from .config import Config, home_dir
 from .widgets.info import render_server, render_target
 from .widgets.modals import Confirm, Help, TextPrompt
 from .widgets.resizer import Resizer
-from .widgets.send_box import SendBox
+from .widgets.send_box import MessageArea, SendBox
 from .widgets.settings_screen import SettingsScreen
 from .widgets.tree import (
     KIND_PANE,
@@ -105,6 +105,7 @@ class TelepaneApp(App[None]):
             self.theme = self.config.theme
         self.query_one(SendBox).set_enter_sends(self.config.enter_sends)
         self.query_one(SendBox).set_md_highlight(self.config.md_highlight)
+        self.query_one(SendBox).set_open_links(self.config.open_links)
         tree = self.query_one("#tree", Tree)
         tree.guide_depth = 3
         tree.show_root = False
@@ -121,6 +122,7 @@ class TelepaneApp(App[None]):
         send = self._main.query_one(SendBox)
         send.set_enter_sends(self.config.enter_sends)
         send.set_md_highlight(self.config.md_highlight)
+        send.set_open_links(self.config.open_links)
         self._clamp_sidebar()
         self._clamp_send_box()
         self._timer.stop()
@@ -301,6 +303,18 @@ class TelepaneApp(App[None]):
         self.notify(f"Message sent to {self.selected.send_target}.")
         self.query_one(SendBox).clear()
         self.set_timer(0.15, self._refresh_preview)
+
+    def on_message_area_link_clicked(self, event: MessageArea.LinkClicked) -> None:
+        self._open_link(event.url)
+
+    @work(thread=True)
+    def _open_link(self, url: str) -> None:
+        try:
+            browser.open_url(url, self.config.browser)
+        except Exception as exc:
+            self.call_from_thread(self.notify, f"Cannot open the link: {exc}", severity="error")
+            return
+        self.call_from_thread(self.notify, f"Opened {url}")
 
     def on_send_box_mode_changed(self, event: SendBox.ModeChanged) -> None:
         self.config.enter_sends = event.enter_sends

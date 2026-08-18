@@ -94,6 +94,13 @@ $ telepane -v  # version
   height, the box hides the viewer.
 - Markdown highlighting in the message box is on by default. To disable it, open
   Settings with the `,` key.
+- The message box shows a live markdown preview. Completed code fences render
+  as rules with the language tag. Bold, italic, links, and headings render
+  styled with their markers hidden. The cursor line and broken syntax show raw
+  text.
+- **Shift+Click** a link to open it in your browser. Pick the browser in
+  Settings (system default, or any installed browser). The toggle
+  "Shift+Click opens links" turns the feature off.
 
 Telepane always sends your text and an Enter key to the target pane. (The Enter key submits the message in that pane.)
 

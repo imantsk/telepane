@@ -61,3 +61,25 @@ def test_rule_text_with_label():
     assert "php" in text.plain
     assert len(text.plain) == 20
     assert md_render.rule_text(10).plain == md_render.RULE_CHAR * 10
+
+
+def test_line_links_spans_and_url():
+    line = "**b** [docs](https://x.io) end"
+    links = md_render.line_links(line)
+    assert len(links) == 1
+    src_start, src_end, vis_start, vis_end, url = links[0]
+    assert url == "https://x.io"
+    assert line[src_start:src_end] == "[docs](https://x.io)"
+    # preview shows "b docs end": docs occupies visual 2..6
+    assert (vis_start, vis_end) == (2, 6)
+
+
+def test_line_links_in_heading():
+    line = "## see [docs](https://x.io)"
+    links = md_render.line_links(line)
+    assert len(links) == 1
+    assert links[0][2] == links[0][0] - 3
+
+
+def test_line_links_none():
+    assert md_render.line_links("no links here") == []

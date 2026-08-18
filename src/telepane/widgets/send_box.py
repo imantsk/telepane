@@ -14,9 +14,44 @@ from . import md_render
 
 class MessageArea(TextArea):
     enter_sends: bool = True
+    open_links: bool = True
 
     class Submitted(Message):
         pass
+
+    class LinkClicked(Message):
+        def __init__(self, url: str) -> None:
+            super().__init__()
+            self.url = url
+
+    async def _on_mouse_down(self, event: events.MouseDown) -> None:
+        if event.shift and self.open_links:
+            url = self._link_at(event)
+            if url is not None:
+                event.stop()
+                self.post_message(self.LinkClicked(url))
+                return
+        await super()._on_mouse_down(event)
+
+    def _link_at(self, event: events.MouseDown) -> str | None:
+        try:
+            row, column = self.get_target_document_location(event)
+            lines = self.document.lines
+            if row >= len(lines):
+                return None
+            links = md_render.line_links(lines[row])
+            if not links:
+                return None
+            if len(links) == 1:
+                return links[0][4]
+            raw = self.cursor_location[0] == row
+            for src_start, src_end, vis_start, vis_end, url in links:
+                start, end = (src_start, src_end) if raw else (vis_start, vis_end)
+                if start <= column < end:
+                    return url
+            return links[0][4]
+        except Exception:
+            return None
 
     def set_markdown(self, enabled: bool) -> None:
         if enabled:
@@ -139,6 +174,9 @@ class SendBox(Vertical):
 
     def set_md_highlight(self, value: bool) -> None:
         self.query_one("#send-input", MessageArea).set_markdown(value)
+
+    def set_open_links(self, value: bool) -> None:
+        self.query_one("#send-input", MessageArea).open_links = value
 
     def _apply_mode(self, value: bool) -> None:
         self.query_one("#send-input", MessageArea).enter_sends = value

@@ -102,3 +102,34 @@ def transform_line(line: str) -> Text | None:
 
 def is_hrule(line: str) -> bool:
     return _HRULE.match(line) is not None
+
+
+def line_links(line: str) -> list[tuple[int, int, int, int, str]]:
+    """Links on a line as (src_start, src_end, vis_start, vis_end, url).
+
+    Visual columns replay the `transform_line` walk, so they match what a
+    previewed line shows. Heading markers shift visual columns too.
+    """
+    out: list[tuple[int, int, int, int, str]] = []
+    heading = _HEADING.match(line)
+    if heading:
+        # A previewed heading conceals only its marker; links stay raw text.
+        shift = len(heading.group(1)) + 1
+        for match in _INLINE.finditer(line):
+            if match.group("ltext") is not None:
+                start, end = match.start(), match.end()
+                out.append((start, end, start - shift, end - shift, match.group("lurl")))
+        return out
+    vis = 0
+    last = 0
+    for match in _INLINE.finditer(line):
+        vis += match.start() - last
+        if match.group("ltext") is not None:
+            text, url = match.group("ltext"), match.group("lurl")
+            out.append((match.start(), match.end(), vis, vis + len(text), url))
+            vis += len(text)
+        else:
+            name = str(match.lastgroup)
+            vis += len(match.group(name))
+        last = match.end()
+    return out

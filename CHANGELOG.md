@@ -6,6 +6,13 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-08-19
+
+- Shift+Click opens a previewed or raw markdown link in the browser. Only
+  http and https links open.
+- New settings: "Link browser" picker (system default or an installed
+  browser) and a "Shift+Click opens links" toggle, default on.
+
 ## [0.9.5] - 2026-08-18
 
 - Live markdown preview in the send box: completed fences render as rules

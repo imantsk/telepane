@@ -36,6 +36,8 @@ class Config:
     sidebar_width: int = 40
     send_height: int = 10
     theme: str = "textual-dark"
+    browser: str = ""
+    open_links: bool = True
     screenshot_format: str = "svg"
     screenshot_save_file: bool = True
     screenshot_clipboard: bool = True

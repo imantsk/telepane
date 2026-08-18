@@ -21,7 +21,7 @@ def compact_path(path: str, home: str = "") -> str:
 
 
 def _fit(value: str, budget: int) -> tuple[str, bool]:
-    """Truncate to `budget` with …; own_line=True when under half would show."""
+    """Truncate to `budget` with …; own_line=True when under half fits."""
     if budget >= len(value):
         return value, False
     if budget < len(value) / 2:
@@ -51,7 +51,7 @@ def render_target(
 ) -> str:
     """Target status bar. Short identity/meta fields sit inline; the long fields
     (path, title) are compacted and ellipsised to fit the width, and drop to
-    their own line when truncation would hide more than half."""
+    their own line when truncation hides more than half."""
     if ref is None:
         return "[dim]Select a session, window, or pane.[/]"
 

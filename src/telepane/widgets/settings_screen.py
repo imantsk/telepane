@@ -10,7 +10,7 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, ListItem, ListView, RadioButton, RadioSet, Switch
 
-from .. import tmux
+from .. import browser, tmux
 from ..config import Config
 from ..tmux_schema import CATEGORIES, COLORS, CUSTOM, PROFILES, Opt
 
@@ -128,6 +128,7 @@ class SettingsScreen(Screen):
     def _telepane_fields(self):
         c = self.config
         yield self._profile_field()
+        yield self._browser_field()
         yield self._bool(
             "enter_sends",
             "Enter sends (off: newline)",
@@ -145,6 +146,12 @@ class SettingsScreen(Screen):
             "Markdown highlight in input",
             c.md_highlight,
             lambda v: self._set_cfg("md_highlight", v),
+        )
+        yield self._bool(
+            "open_links",
+            "Shift+Click opens links",
+            c.open_links,
+            lambda v: self._set_cfg("open_links", v),
         )
         yield self._textnum(
             "poll_interval",
@@ -173,6 +180,19 @@ class SettingsScreen(Screen):
             c.send_height,
             lambda v: self._set_cfg("send_height", int(v)),
             numeric=True,
+        )
+
+    def _browser_field(self):
+        options = browser.installed()
+        current = self.config.browser or browser.SYSTEM
+        if current not in options:
+            options.append(current)
+        return self._choice(
+            "browser",
+            "Link browser",
+            options,
+            current,
+            lambda v: self._set_cfg("browser", "" if v == browser.SYSTEM else v),
         )
 
     def _theme_field(self):

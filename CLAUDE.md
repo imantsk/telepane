@@ -47,15 +47,19 @@ pane or a bounced server never crashes the UI.
 - **`config.py`**: the only module that reads the environment (`home_dir`, XDG).
   `Config` dataclass ↔ `~/.config/telepane/config.json`.
 - **`clipboard.py`**: argv-only clipboard (macOS `pbcopy`/`osascript` file copy,
-  Linux `wl-copy`/`xclip`/`xsel`). **`screenshot.py`**: svg/png/md capture,
-  save and/or clipboard. **`tmux_schema.py`**: categorised option specs,
-  named profiles, colour-swatch palette.
+  Linux `wl-copy`/`xclip`/`xsel`). **`browser.py`**: argv-only link opening
+  (system default via `webbrowser`, named browser via `open -a`/binary) plus
+  installed-browser discovery for the settings picker. **`screenshot.py`**:
+  svg/png/md capture, save and/or clipboard. **`tmux_schema.py`**: categorised
+  option specs, named profiles, colour-swatch palette.
 - **`app.py`**: `TelepaneApp(App)`. Left: window/pane `Tree`. Right: server stats,
   selected-target info, `capture-pane` preview, and the `SendBox`. A refresh
   timer re-polls; tree selection sets `self.selected` (a `NodeRef`); `SendBox.Send`
   messages become `tmux.send_text` calls.
 - **`widgets/`**: `tree.py` (windows-as-roots + `NodeRef`), `send_box.py` (input
-  box + `MessageArea`, dual-label enter toggle), `info.py` (Rich renderers +
+  box + `MessageArea`: dual-label enter toggle, live markdown preview via
+  `render_line`, Shift+Click link opening), `md_render.py` (pure preview
+  transforms: fence map, inline styling, link spans), `info.py` (Rich renderers +
   `compact_path`), `resizer.py` (draggable dividers, axis x/y, emit `Committed`),
   `modals.py` (new/rename prompt, kill confirm, help), `settings_screen.py`
   (full-screen settings: subsection sidebar + field list). UI only.
