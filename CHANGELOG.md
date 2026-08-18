@@ -6,6 +6,10 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-08-18
+
+- Rewrite the readme and refresh the PyPI project page.
+
 ## [0.9.3] - 2026-08-18
 
 - Fix an import crash on Python 3.9 in the modal screens.
