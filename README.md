@@ -24,29 +24,61 @@ keyboard both work.
 └──────────────┴──────────────────────────────────────┘
 ```
 
-## Install
+## Pair with your agent
 
-```bash
-pip install telepane            # or: pipx install telepane  /  uv tool install telepane
+You do not have to set any of this up yourself. Tell your coding agent:
+
+```md
+Install telepane from pip and set me up for agent pairing.
 ```
 
-Telepane needs Python 3.9 or higher. Telepane needs a tmux server that runs.
+The repo ships a Claude Code plugin with an `agent-pairing` skill. The skill
+teaches the agent the full workflow: terminal and tmux setup, worker agents in
+side panes (claude, codex, gemini, copilot, opencode, cursor-agent, and
+others), briefing, and teardown. You steer any of those agents mid-session
+with telepane: select the target pane, type your message, send it.
 
-On Python 3.10 or higher, markdown highlighting installs automatically. The
-tree-sitter dependency has no wheel for Python 3.9.
+## Why not just switch panes?
 
-PNG screenshots need one more package. The cairosvg package needs the native
-cairo library. To install the extra, run this command:
+You can. But you sometimes control several agents across many panes. One control
+surface is faster in this case. It lists all the panes. It shows the state of
+each pane. You type to any pane and you keep your place.
+
+## Design notes
+
+- Every tmux call is an argv list through `subprocess`. Telepane uses no shell.
+- Telepane addresses panes by the stable tmux ids (`$`, `@`, `%`).
+- Telepane delivers text with `send-keys -l --` (literal).
+
+## Install the `skill` manually
 
 ```bash
-pip install "telepane[png]"
+$ claude plugin marketplace add imantsk/telepane
+# then inside claude: /plugin install telepane
+```
+
+## Install `telepane` manually
+
+```bash
+$ pip install telepane  
+# or: pipx install telepane 
+# or: uv tool install telepane
+```
+
+Telepane needs Python 3.9 or higher and a trunning mux server.
+
+PNG screenshots need one more package. The cairosvg package needs the native cairo library. 
+To install the extra, run this command:
+
+```bash
+$ pip install "telepane[png]"
 ```
 
 ## Use
 
 ```bash
-telepane          # launch the dashboard (run it in its own pane)
-telepane -v       # version
+$ telepane     # launch the TUI dashboard
+$ telepane -v  # version
 ```
 
 - Click a session, window, or pane in the left tree to select the target.
@@ -57,16 +89,12 @@ telepane -v       # version
   - *⏎ to newline*: Enter adds a new line. Shift+Enter sends the message.
 
   Shift+Enter needs a terminal that reports extended keys.
-- Drag the **┆ divider** to resize the sidebar. Drag the **┄ divider** to
-  resize the pane viewer and the message box. The message box goes from one
+- Drag the dotted deviders (┆and ┄) to resize the sidebar and the message box. The message box goes from one
   input line to the full height. At full height, the box hides the viewer.
-  Telepane saves both sizes.
 - Markdown highlighting in the message box is on by default. To disable it, open
-  Settings with the `,` key. Python 3.10 or higher gets highlighting
-  automatically.
+  Settings with the `,` key.
 
-Telepane always sends your text and an Enter key to the target pane. The Enter
-key submits the message in that pane.
+Telepane always sends your text and an Enter key to the target pane. (The Enter key submits the message in that pane.)
 
 ### Keys
 
@@ -80,35 +108,6 @@ key submits the message in that pane.
 | `q` | quit | | |
 
 Telepane saves settings to `~/.config/telepane/config.json`.
-
-## Pair with your agent
-
-You do not have to set any of this up yourself. Tell your coding agent:
-
-> Install telepane from pip and set me up for agent pairing.
-
-The repo ships a Claude Code plugin with an `agent-pairing` skill. The skill
-teaches the agent the full workflow: terminal and tmux setup, worker agents in
-side panes (claude, codex, gemini, copilot, opencode, cursor-agent, and
-others), briefing, and teardown. You steer any of those agents mid-session
-with telepane: click the pane, type, press Enter.
-
-```bash
-claude plugin marketplace add imantsk/telepane
-# then inside claude: /plugin install telepane
-```
-
-## Why not just switch panes?
-
-You can. But you sometimes control several agents across many panes. One control
-surface is faster in this case. It lists all the panes. It shows the state of
-each pane. You type to any pane and you keep your place.
-
-## Design notes
-
-- Every tmux call is an argv list through `subprocess`. Telepane uses no shell.
-- Telepane addresses panes by the stable tmux ids (`$`, `@`, `%`).
-- Telepane delivers text with `send-keys -l --` (literal).
 
 ## License
 
