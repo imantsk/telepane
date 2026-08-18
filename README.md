@@ -60,14 +60,14 @@ $ claude plugin marketplace add imantsk/telepane
 ## Install `telepane` manually
 
 ```bash
-$ pip install telepane  
-# or: pipx install telepane 
+$ pip install telepane
+# or: pipx install telepane
 # or: uv tool install telepane
 ```
 
-Telepane needs Python 3.9 or higher and a trunning mux server.
+Telepane needs Python 3.9 or higher and a running tmux server.
 
-PNG screenshots need one more package. The cairosvg package needs the native cairo library. 
+PNG screenshots need one more package. The cairosvg package needs the native cairo library.
 To install the extra, run this command:
 
 ```bash
@@ -89,8 +89,9 @@ $ telepane -v  # version
   - *⏎ to newline*: Enter adds a new line. Shift+Enter sends the message.
 
   Shift+Enter needs a terminal that reports extended keys.
-- Drag the dotted deviders (┆and ┄) to resize the sidebar and the message box. The message box goes from one
-  input line to the full height. At full height, the box hides the viewer.
+- Drag the dotted dividers (┆ and ┄) to resize the sidebar and the message
+  box. The message box goes from one input line to the full height. At full
+  height, the box hides the viewer.
 - Markdown highlighting in the message box is on by default. To disable it, open
   Settings with the `,` key.
 
