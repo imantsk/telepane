@@ -6,6 +6,18 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.9] - 2026-08-19
+
+- Shift+Click a split key to pick what runs in the new pane: an installed
+  agent CLI, or a custom command. A yolo toggle (default on) adds the
+  agent's approval-bypass flag, inferred from its own --help output.
+- New panes start in the source pane's directory. The picker has a working
+  directory input with Tab completion.
+- Update entry in the command palette: dim when current, active when a new
+  version exists.
+- Rename acts on the selected window, or the window of the selected pane.
+- Center the split picker and cap its height.
+
 ## [0.9.8] - 2026-08-19
 
 - Show the version in the settings footer.
