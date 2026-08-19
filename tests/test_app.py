@@ -609,3 +609,19 @@ async def test_focus_triggers_stale_update_check(mocked, monkeypatch):
                 break
             await pilot.pause(0.05)
     assert len(calls) > boot_calls
+
+
+@pytest.mark.asyncio
+async def test_update_interval_setting_applies_live(mocked):
+    from telepane.config import Config
+
+    config = Config()
+    config.update_interval = 900
+    app = TelepaneApp(config=config)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        assert app._update_timer._interval == 900
+        app.config.update_interval = 86400
+        app.apply_config_live()
+        await pilot.pause()
+        assert app._update_timer._interval == 86400

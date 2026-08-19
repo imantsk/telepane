@@ -81,3 +81,21 @@ def test_clamp_size_clamps_max():
 
 def test_clamp_size_passthrough():
     assert clamp_size(80, 200, 20) == 80
+
+
+def test_hhmm_parse_and_format():
+    from telepane.widgets.settings_screen import _hhmm_to_seconds, _seconds_to_hhmm
+
+    assert _hhmm_to_seconds("1:00") == 3600
+    assert _hhmm_to_seconds("0:15") == 900
+    assert _hhmm_to_seconds("24:00") == 86400
+    assert _hhmm_to_seconds("2:30") == 9000
+    assert _hhmm_to_seconds("3") == 10800  # bare hours
+    assert _seconds_to_hhmm(9000) == "2:30"
+    assert _seconds_to_hhmm(900) == "0:15"
+    import pytest as _pytest
+
+    with _pytest.raises(ValueError):
+        _hhmm_to_seconds("0:00")
+    with _pytest.raises(ValueError):
+        _hhmm_to_seconds("abc")

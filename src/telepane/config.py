@@ -40,6 +40,7 @@ class Config:
     browser: str = ""
     open_links: bool = True
     update_check: bool = True
+    update_interval: int = 3600
     auto_update: bool = True
     screenshot_format: str = "svg"
     screenshot_save_file: bool = True

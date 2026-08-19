@@ -32,8 +32,8 @@ from .widgets.tree import (
 _MIN_SIDEBAR = 20
 _MIN_SEND = 6
 _SEND_MAX = 100_000
-_UPDATE_INTERVAL = 3600
 _UPDATE_MIN_GAP = 600.0
+_UPDATE_INTERVAL_MIN = 60
 
 
 class _MenuCommands(Provider):
@@ -136,7 +136,9 @@ class TelepaneApp(App[None]):
         self._timer = self.set_interval(self.config.poll_interval, self._tick)
         self.call_after_refresh(self._apply_saved_sizes)
         self._check_updates()
-        self.set_interval(_UPDATE_INTERVAL, self._check_updates)
+        self._update_timer = self.set_interval(
+            max(_UPDATE_INTERVAL_MIN, self.config.update_interval), self._check_updates
+        )
 
     @property
     def _main(self):
@@ -152,6 +154,11 @@ class TelepaneApp(App[None]):
         self._clamp_send_box()
         self._timer.stop()
         self._timer = self.set_interval(self.config.poll_interval, self._tick)
+        if hasattr(self, "_update_timer"):
+            self._update_timer.stop()
+            self._update_timer = self.set_interval(
+                max(_UPDATE_INTERVAL_MIN, self.config.update_interval), self._check_updates
+            )
 
     def _apply_saved_sizes(self) -> None:
         self._clamp_sidebar()

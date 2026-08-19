@@ -17,6 +17,21 @@ from ..tmux_schema import CATEGORIES, COLORS, CUSTOM, PROFILES, Opt
 _TELEPANE = "Telepane"
 _APP_SUBSECTIONS = [_TELEPANE, "Theme", "Screenshot"]
 
+_FREQ_PRESETS = {"1d": 86400, "1h": 3600, "15m": 900}
+
+
+def _hhmm_to_seconds(value: str) -> int:
+    hours, _, minutes = value.strip().partition(":")
+    seconds = int(hours or 0) * 3600 + int(minutes or 0) * 60
+    if seconds < 60:
+        raise ValueError(value)
+    return seconds
+
+
+def _seconds_to_hhmm(seconds: int) -> str:
+    return f"{seconds // 3600}:{(seconds % 3600) // 60:02d}"
+
+
 _GROUP = {"bool": 0, "choice": 1, "color": 1, "text": 2, "number": 3}
 
 
@@ -171,6 +186,22 @@ class SettingsScreen(Screen):
             "Auto update",
             c.auto_update,
             lambda v: self._set_cfg("auto_update", v),
+        )
+        current = next(
+            (label for label, secs in _FREQ_PRESETS.items() if secs == c.update_interval), ""
+        )
+        yield self._choice(
+            "update_interval",
+            "Update check frequency",
+            list(_FREQ_PRESETS),
+            current,
+            lambda v: self._set_cfg("update_interval", _FREQ_PRESETS[str(v)]),
+        )
+        yield self._textnum(
+            "update_interval_custom",
+            "Custom frequency (hh:mm)",
+            "" if current else _seconds_to_hhmm(c.update_interval),
+            lambda v: self._set_cfg("update_interval", _hhmm_to_seconds(str(v))),
         )
         yield self._textnum(
             "poll_interval",
