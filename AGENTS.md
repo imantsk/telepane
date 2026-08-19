@@ -63,6 +63,7 @@ src/telepane/
   clipboard.py   argv-only clipboard boundary
   browser.py     argv-only browser boundary (link opening, browser discovery)
   procname.py    argv-only ps boundary (humanized pane command names)
+  updates.py     update check (PyPI JSON) and argv pip upgrade
   styles.tcss    Textual CSS
 tests/           mirror src units; test_live.py gated by TELEPANE_LIVE_TESTS
 ```
@@ -110,7 +111,8 @@ persist secrets (this tool has none. Keep it that way).
 
 - **The tmux seam**: every tmux call is `tmux._run([...])`. Callers use the
   typed helpers in `tmux.py`. The only other subprocess boundaries are
-  `clipboard.py`, `browser.py`, and `procname.py`, argv-only like the tmux
+  `clipboard.py`, `browser.py`, `procname.py`, and `updates.py`, argv-only
+  like the tmux
   seam. No other module imports `subprocess`.
 - **Id targeting**: see Rule 1.
 - **UI holds no tmux logic**: `widgets/` render and emit messages; `app.py`
@@ -121,8 +123,9 @@ persist secrets (this tool has none. Keep it that way).
 
 ### Deliberate limits: keep them, do not silently "fix"
 
-- **No self-update.** Updates go through `pip`. Do not add code that installs or
-  upgrades the package at runtime.
+- **Self-update is scoped to `updates.py`.** It checks the PyPI JSON endpoint
+  for `telepane` and upgrades through an argv `pip` call when the `auto_update`
+  setting is on. No other module installs anything at runtime.
 - **Preview is a snapshot**, not a live pty mirror. It is `capture-pane` polled
   on the refresh interval. Do not turn it into a terminal emulator.
 
@@ -195,7 +198,8 @@ If a fact needs exact wording for safety, keep the fact. Add the tag
 - Text sent to a pane is delivered literally (`send-keys -l --`); it is never
   interpreted as a command by telepane and never passes through a shell.
 - Targets are tmux ids telepane itself read from the server. Never user strings.
-- No dynamic evaluation of any input. No secrets, no remote content fetching.
+- No dynamic evaluation of any input. No secrets. The only remote call is the
+  PyPI version check in `updates.py`.
 - Named invariant: **no shell interpolation**, enforced by `tmux._run`, proven by
   `tests/test_tmux.py`.
 

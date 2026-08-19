@@ -324,3 +324,38 @@ async def test_shift_click_disabled_by_setting(mocked, monkeypatch):
         await pilot.click(MessageArea, offset=(6, 0), shift=True)
         await pilot.pause()
     assert opened == []
+
+
+@pytest.mark.asyncio
+async def test_update_notice_appears(mocked, monkeypatch):
+    from telepane import updates
+
+    monkeypatch.setattr(updates, "latest_version", lambda: "99.0.0")
+    monkeypatch.setattr(updates, "upgrade", lambda: False)
+    from telepane.config import Config
+
+    config = Config()
+    config.auto_update = False
+    app = TelepaneApp(config=config)
+    async with app.run_test() as pilot:
+        for _ in range(40):
+            if app.query("#update-notice"):
+                break
+            await pilot.pause(0.05)
+        notice = app.query_one("#update-notice")
+        assert "99.0.0" in str(notice.render())
+
+
+@pytest.mark.asyncio
+async def test_no_notice_when_check_disabled(mocked, monkeypatch):
+    from telepane import updates
+
+    monkeypatch.setattr(updates, "latest_version", lambda: "99.0.0")
+    from telepane.config import Config
+
+    config = Config()
+    config.update_check = False
+    app = TelepaneApp(config=config)
+    async with app.run_test() as pilot:
+        await pilot.pause(0.3)
+        assert not app.query("#update-notice")

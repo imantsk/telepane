@@ -177,3 +177,11 @@ TextPrompt, Confirm, Help {
     text-style: bold;
     padding-top: 1;
 }
+
+#update-notice {
+    dock: right;
+    width: auto;
+    padding: 0 1;
+    color: $warning;
+    background: transparent;
+}

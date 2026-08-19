@@ -11,7 +11,7 @@ from textual.command import DiscoveryHit, Hit, Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Static, Tree
 
-from . import browser, procname, screenshot, tmux
+from . import __version__, browser, procname, screenshot, tmux, updates
 from .config import Config, home_dir
 from .widgets.info import render_server, render_target
 from .widgets.modals import Confirm, Help, TextPrompt
@@ -30,6 +30,7 @@ from .widgets.tree import (
 _MIN_SIDEBAR = 20
 _MIN_SEND = 6
 _SEND_MAX = 100_000
+_UPDATE_INTERVAL = 6 * 3600
 
 
 class _MenuCommands(Provider):
@@ -114,6 +115,8 @@ class TelepaneApp(App[None]):
         self.refresh_data()
         self._timer = self.set_interval(self.config.poll_interval, self._tick)
         self.call_after_refresh(self._apply_saved_sizes)
+        self._check_updates()
+        self.set_interval(_UPDATE_INTERVAL, self._check_updates)
 
     @property
     def _main(self):
@@ -335,6 +338,36 @@ class TelepaneApp(App[None]):
     def on_send_box_mode_changed(self, event: SendBox.ModeChanged) -> None:
         self.config.enter_sends = event.enter_sends
         self.config.save()
+
+    # ── updates ──────────────────────────────────────────────────────────
+
+    @work(thread=True)
+    def _check_updates(self) -> None:
+        if not self.config.update_check:
+            return
+        latest = updates.latest_version()
+        if latest is None or not updates.is_newer(latest, __version__):
+            return
+        self.call_from_thread(self._show_update_notice, f"⬆ {latest}")
+        if not self.config.auto_update:
+            return
+        if updates.upgrade():
+            self.call_from_thread(self._show_update_notice, f"⬆ {latest} ready · restart")
+            self.call_from_thread(self.notify, f"Updated to {latest}. Restart telepane.")
+        else:
+            self.call_from_thread(
+                self.notify, f"Cannot auto-update to {latest}.", severity="warning"
+            )
+
+    def _show_update_notice(self, text: str) -> None:
+        header = self.query_one(Header)
+        try:
+            notice = header.query_one("#update-notice", Static)
+        except Exception:
+            notice = Static(text, id="update-notice")
+            header.mount(notice)
+            return
+        notice.update(text)
 
     # ── actions ──────────────────────────────────────────────────────────
 
