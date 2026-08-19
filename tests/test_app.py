@@ -496,13 +496,20 @@ async def test_action_update_installs_when_available(mocked, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_action_update_noop_when_current(mocked, monkeypatch):
+async def test_action_update_runs_manual_check_when_current(mocked, monkeypatch):
+    from telepane import updates
+
+    monkeypatch.setattr(updates, "latest_version", lambda: "0.0.1")
     notes = []
     app = TelepaneApp()
     async with app.run_test() as pilot:
         monkeypatch.setattr(app, "notify", lambda msg, **kw: notes.append(msg))
         app.action_update()
-        await pilot.pause()
+        for _ in range(40):
+            if any("latest version" in n for n in notes):
+                break
+            await pilot.pause(0.05)
+    assert any("Checking for updates" in n for n in notes)
     assert any("latest version" in n for n in notes)
     assert not app._update_ready
 
@@ -625,3 +632,69 @@ async def test_update_interval_setting_applies_live(mocked):
         app.apply_config_live()
         await pilot.pause()
         assert app._update_timer._interval == 86400
+
+
+@pytest.mark.asyncio
+async def test_custom_frequency_selects_custom_radio(mocked):
+    from textual.widgets import Input, RadioButton, RadioSet
+
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        app.action_settings()
+        await pilot.pause()
+        box = app.screen.query_one("#f-update_interval_custom", Input)
+        box.focus()
+        box.value = "2:30"
+        await pilot.pause()
+        rs = app.screen.query_one("#f-update_interval", RadioSet)
+        pressed = [b.name for b in rs.query(RadioButton) if b.value]
+        assert pressed == ["custom"]
+        await pilot.press("enter")
+        await pilot.pause()
+        assert app.config.update_interval == 9000
+
+
+@pytest.mark.asyncio
+async def test_preset_frequency_blanks_custom(mocked):
+    from textual.widgets import Input, RadioButton, RadioSet
+
+    from telepane.config import Config
+
+    config = Config()
+    config.update_interval = 9000  # custom value
+    app = TelepaneApp(config=config)
+    async with app.run_test() as pilot:
+        app.action_settings()
+        await pilot.pause()
+        box = app.screen.query_one("#f-update_interval_custom", Input)
+        assert box.value == "2:30"
+        rs = app.screen.query_one("#f-update_interval", RadioSet)
+        custom_pressed = [b.name for b in rs.query(RadioButton) if b.value]
+        assert custom_pressed == ["custom"]
+        for b in rs.query(RadioButton):
+            if b.name == "15m":
+                b.value = True
+                break
+        await pilot.pause()
+        assert app.config.update_interval == 900
+        assert box.value == ""
+
+
+@pytest.mark.asyncio
+async def test_invalid_setting_toasts_and_keeps_value(mocked, monkeypatch):
+    from textual.widgets import Input
+
+    notes = []
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        app.action_settings()
+        await pilot.pause()
+        monkeypatch.setattr(app.screen, "notify", lambda msg, **kw: notes.append(msg))
+        before = app.config.poll_interval
+        box = app.screen.query_one("#f-poll_interval", Input)
+        box.focus()
+        box.value = "9999999"
+        await pilot.press("enter")
+        await pilot.pause()
+        assert app.config.poll_interval == before
+        assert any("needs a number" in n for n in notes)

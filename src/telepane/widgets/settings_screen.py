@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -18,18 +19,42 @@ _TELEPANE = "Telepane"
 _APP_SUBSECTIONS = [_TELEPANE, "Theme", "Screenshot"]
 
 _FREQ_PRESETS = {"1d": 86400, "1h": 3600, "15m": 900}
+_FREQ_CUSTOM = "custom"
+_HHMM = re.compile(r"^(\d{1,3})(?::([0-5]?\d))?$")
 
 
 def _hhmm_to_seconds(value: str) -> int:
-    hours, _, minutes = value.strip().partition(":")
-    seconds = int(hours or 0) * 3600 + int(minutes or 0) * 60
-    if seconds < 60:
-        raise ValueError(value)
+    match = _HHMM.match(value.strip())
+    if match is None:
+        raise ValueError("needs hh:mm, for example 2:30")
+    seconds = int(match[1]) * 3600 + int(match[2] or 0) * 60
+    if not 60 <= seconds <= 604800:
+        raise ValueError("needs 0:01 to 168:00")
     return seconds
 
 
 def _seconds_to_hhmm(seconds: int) -> str:
     return f"{seconds // 3600}:{(seconds % 3600) // 60:02d}"
+
+
+def _int_in(value, lo: int, hi: int) -> int:
+    try:
+        parsed = int(str(value).strip())
+    except (ValueError, TypeError):
+        raise ValueError(f"needs a whole number {lo}-{hi}") from None
+    if not lo <= parsed <= hi:
+        raise ValueError(f"needs a whole number {lo}-{hi}")
+    return parsed
+
+
+def _float_in(value, lo: float, hi: float) -> float:
+    try:
+        parsed = float(str(value).strip())
+    except (ValueError, TypeError):
+        raise ValueError(f"needs a number {lo}-{hi}") from None
+    if not lo <= parsed <= hi:
+        raise ValueError(f"needs a number {lo}-{hi}")
+    return parsed
 
 
 _GROUP = {"bool": 0, "choice": 1, "color": 1, "text": 2, "number": 3}
@@ -188,49 +213,76 @@ class SettingsScreen(Screen):
             lambda v: self._set_cfg("auto_update", v),
         )
         current = next(
-            (label for label, secs in _FREQ_PRESETS.items() if secs == c.update_interval), ""
+            (label for label, secs in _FREQ_PRESETS.items() if secs == c.update_interval),
+            _FREQ_CUSTOM,
         )
         yield self._choice(
             "update_interval",
             "Update check frequency",
-            list(_FREQ_PRESETS),
+            [*_FREQ_PRESETS, _FREQ_CUSTOM],
             current,
-            lambda v: self._set_cfg("update_interval", _FREQ_PRESETS[str(v)]),
+            self._set_frequency,
         )
         yield self._textnum(
             "update_interval_custom",
             "Custom frequency (hh:mm)",
-            "" if current else _seconds_to_hhmm(c.update_interval),
-            lambda v: self._set_cfg("update_interval", _hhmm_to_seconds(str(v))),
+            "" if current != _FREQ_CUSTOM else _seconds_to_hhmm(c.update_interval),
+            self._set_frequency_custom,
         )
         yield self._textnum(
             "poll_interval",
             "Refresh interval (s)",
             c.poll_interval,
-            lambda v: self._set_cfg("poll_interval", float(v)),
+            lambda v: self._set_cfg("poll_interval", _float_in(v, 0.5, 3600)),
             numeric=True,
         )
         yield self._textnum(
             "preview_lines",
             "Preview lines",
             c.preview_lines,
-            lambda v: self._set_cfg("preview_lines", int(v)),
+            lambda v: self._set_cfg("preview_lines", _int_in(v, 1, 10000)),
             numeric=True,
         )
         yield self._textnum(
             "sidebar_width",
             "Sidebar width",
             c.sidebar_width,
-            lambda v: self._set_cfg("sidebar_width", int(v)),
+            lambda v: self._set_cfg("sidebar_width", _int_in(v, 20, 500)),
             numeric=True,
         )
         yield self._textnum(
             "send_height",
             "Send box height",
             c.send_height,
-            lambda v: self._set_cfg("send_height", int(v)),
+            lambda v: self._set_cfg("send_height", _int_in(v, 1, 100000)),
             numeric=True,
         )
+
+    def _set_frequency(self, value) -> None:
+        label = str(value)
+        if label == _FREQ_CUSTOM:
+            raw = self.query_one("#f-update_interval_custom", Input).value
+            if not raw.strip():
+                raise ValueError("type a custom hh:mm first")
+            self._set_cfg("update_interval", _hhmm_to_seconds(raw))
+            return
+        self._set_cfg("update_interval", _FREQ_PRESETS[label])
+        custom = self.query_one("#f-update_interval_custom", Input)
+        custom.value = ""
+
+    def _set_frequency_custom(self, value) -> None:
+        self._set_cfg("update_interval", _hhmm_to_seconds(str(value)))
+        self._press_radio("f-update_interval", _FREQ_CUSTOM)
+
+    def _press_radio(self, wid: str, name: str) -> None:
+        radio_set = self.query_one(f"#{wid}", RadioSet)
+        with radio_set.prevent(RadioSet.Changed):
+            for button in radio_set.query(RadioButton):
+                button.value = button.name == name
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "f-update_interval_custom" and event.value.strip():
+            self._press_radio("f-update_interval", _FREQ_CUSTOM)
 
     def _browser_field(self):
         options = browser.installed()
@@ -248,6 +300,15 @@ class SettingsScreen(Screen):
     def _theme_field(self):
         themes = list(self.app.available_themes)
         return self._choice("theme", "Theme", themes, self.config.theme, self._set_theme)
+
+    def _valid_dir(self, value) -> str:
+        raw = str(value).strip()
+        if not raw:
+            return ""
+        path = raw.replace("~", str(self.app._home), 1) if raw.startswith("~") else raw
+        if not Path(path).is_dir():
+            raise ValueError("needs an existing directory, or blank for home")
+        return raw
 
     def _screenshot_fields(self):
         c = self.config
@@ -274,7 +335,7 @@ class SettingsScreen(Screen):
             "screenshot_dir",
             "Save directory (blank = home)",
             c.screenshot_dir,
-            lambda v: self._set_cfg("screenshot_dir", v),
+            lambda v: self._set_cfg("screenshot_dir", self._valid_dir(v)),
         )
 
     def _profile_field(self):
@@ -305,12 +366,19 @@ class SettingsScreen(Screen):
                 lambda v, o=opt: self._set_tmux(o, v),
                 swatch=True,
             )
+        if opt.type == "number":
+            return self._textnum(
+                opt.name,
+                opt.label,
+                current,
+                lambda v, o=opt: self._set_tmux(o, str(_int_in(v, 0, 10_000_000))),
+                numeric=True,
+            )
         return self._textnum(
             opt.name,
             opt.label,
             current,
-            lambda v, o=opt: self._set_tmux(o, v),
-            numeric=(opt.type == "number"),
+            lambda v, o=opt: self._set_tmux(o, str(v).strip()),
         )
 
     # ── apply ───────────────────────────────────────────────────────────--
@@ -371,5 +439,5 @@ class SettingsScreen(Screen):
             return
         try:
             setter(value)
-        except (ValueError, TypeError):
-            self.notify("invalid value", severity="warning")
+        except (ValueError, TypeError) as exc:
+            self.notify(str(exc) or "invalid value", severity="warning")

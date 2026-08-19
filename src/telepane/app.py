@@ -386,12 +386,18 @@ class TelepaneApp(App[None]):
     # ── updates ──────────────────────────────────────────────────────────
 
     @work(thread=True)
-    def _check_updates(self) -> None:
-        if not self.config.update_check:
+    def _check_updates(self, manual: bool = False) -> None:
+        if not self.config.update_check and not manual:
             return
         self._update_checked_at = time.monotonic()
         latest = updates.latest_version()
         if latest is None or not updates.is_newer(latest, __version__):
+            if manual and latest is None:
+                self.call_from_thread(
+                    self.notify, "Cannot reach PyPI to check.", severity="warning"
+                )
+            elif manual:
+                self.call_from_thread(self.notify, f"telepane {__version__} is the latest version.")
             return
         self._update_latest = latest
         self.call_from_thread(self._show_update_notice, f"⬆ {latest}")
@@ -421,7 +427,8 @@ class TelepaneApp(App[None]):
             self.notify(f"Updating to {self._update_latest}...")
             self._install_worker(self._update_latest)
             return
-        self.notify(f"telepane {__version__} is the latest version.")
+        self.notify("Checking for updates...")
+        self._check_updates(manual=True)
 
     def _show_update_notice(self, text: str) -> None:
         header = self.query_one(Header)

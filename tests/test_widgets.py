@@ -89,6 +89,7 @@ def test_hhmm_parse_and_format():
     assert _hhmm_to_seconds("1:00") == 3600
     assert _hhmm_to_seconds("0:15") == 900
     assert _hhmm_to_seconds("24:00") == 86400
+    assert _hhmm_to_seconds("168:00") == 604800
     assert _hhmm_to_seconds("2:30") == 9000
     assert _hhmm_to_seconds("3") == 10800  # bare hours
     assert _seconds_to_hhmm(9000) == "2:30"
@@ -99,3 +100,27 @@ def test_hhmm_parse_and_format():
         _hhmm_to_seconds("0:00")
     with _pytest.raises(ValueError):
         _hhmm_to_seconds("abc")
+
+
+def test_hhmm_rejects_bad_shapes():
+    import pytest as _pytest
+
+    from telepane.widgets.settings_screen import _hhmm_to_seconds
+
+    for bad in ("1:75", "200:00", "-1:00", "1:2:3", ""):
+        with _pytest.raises(ValueError):
+            _hhmm_to_seconds(bad)
+
+
+def test_int_and_float_validators():
+    import pytest as _pytest
+
+    from telepane.widgets.settings_screen import _float_in, _int_in
+
+    assert _int_in("42", 1, 100) == 42
+    assert _float_in("2.5", 0.5, 3600) == 2.5
+    for bad in ("0", "101", "abc", ""):
+        with _pytest.raises(ValueError):
+            _int_in(bad, 1, 100)
+    with _pytest.raises(ValueError):
+        _float_in("0.1", 0.5, 3600)
