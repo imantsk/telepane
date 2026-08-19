@@ -31,6 +31,7 @@ class Config:
     enter_sends: bool = True
     confirm_kill: bool = True
     md_highlight: bool = True
+    humanize_commands: bool = True
     poll_interval: float = 2.0
     preview_lines: int = 40
     sidebar_width: int = 40
