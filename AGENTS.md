@@ -153,7 +153,9 @@ persist secrets (this tool has none. Keep it that way).
 
 ## Pull requests
 
-Factual: what changed and how it was verified. No narrative reasoning.
+Factual: what changed and how it was verified. No narrative reasoning. No AI
+attribution lines ("Generated with...", robot emoji, `Co-Authored-By` bots) in
+PR bodies, commits, or anywhere in the repo.
 
 ## Docs and messages (ASD-STE100 Simplified Technical English)
 
