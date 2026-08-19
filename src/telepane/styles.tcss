@@ -200,3 +200,19 @@ TextPrompt, Confirm, Help, SplitPrompt {
     max-height: 6;
     margin: 0 0 1 0;
 }
+
+#split-yolo-row {
+    height: 1;
+    align: left middle;
+}
+
+#split-yolo-row Label {
+    height: 1;
+    content-align: left middle;
+    padding-left: 1;
+}
+
+#split-yolo-row Switch {
+    border: none;
+    height: 1;
+}

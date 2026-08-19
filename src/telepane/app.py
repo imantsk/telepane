@@ -12,7 +12,7 @@ from textual.command import DiscoveryHit, Hit, Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Static, Tree
 
-from . import __version__, browser, procname, screenshot, tmux, updates
+from . import __version__, agents, browser, procname, screenshot, tmux, updates
 from .config import Config, home_dir
 from .widgets.info import render_server, render_target
 from .widgets.modals import Confirm, Help, SplitPrompt, TextPrompt
@@ -520,12 +520,25 @@ class TelepaneApp(App[None]):
             self.notify("No target is selected.", severity="warning")
             return
 
-        def done(command: str | None) -> None:
-            if command is None:
+        def done(result: tuple | None) -> None:
+            if result is None:
                 return
-            self._split(horizontal, command=command or None)
+            kind, value, yolo = result
+            if kind == "agent":
+                self._split_agent(value, horizontal=horizontal, yolo=yolo)
+            else:
+                self._split(horizontal, command=value or None)
 
         self.push_screen(SplitPrompt(horizontal=horizontal), done)
+
+    @work(thread=True)
+    def _split_agent(self, name: str, *, horizontal: bool, yolo: bool) -> None:
+        command = name
+        if yolo:
+            flag = agents.bypass_flag(name)
+            if flag:
+                command = f"{name} {flag}"
+        self.call_from_thread(self._split, horizontal, command)
 
     def action_split_h(self) -> None:
         if self._consume_picker("split_h"):

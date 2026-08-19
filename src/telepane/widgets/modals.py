@@ -7,7 +7,7 @@ from typing import Optional
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, ListItem, ListView
+from textual.widgets import Button, Input, Label, ListItem, ListView, Switch
 
 from .. import agents
 
@@ -65,9 +65,10 @@ class Confirm(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class SplitPrompt(ModalScreen[Optional[str]]):
+class SplitPrompt(ModalScreen[Optional[tuple]]):
     """Pick what runs in the new pane: the shell, an installed agent CLI, or a
-    custom command. Dismisses with the command string ("" = shell), or None."""
+    custom command. Dismisses with (kind, value, yolo): kind is "shell",
+    "agent", or "custom". yolo asks for the agent's approval-bypass flag."""
 
     BINDINGS = [("escape", "cancel", "Cancel")]
     SHELL = "shell (default)"
@@ -83,15 +84,26 @@ class SplitPrompt(ModalScreen[Optional[str]]):
             items = [ListItem(Label(self.SHELL), name="")]
             items += [ListItem(Label(name), name=name) for name in agents.installed()]
             yield ListView(*items, id="split-agents")
+            with Horizontal(id="split-yolo-row"):
+                yield Switch(value=True, id="split-yolo")
+                yield Label("yolo (skip approvals)")
             yield Input(placeholder="custom command · esc cancels", id="split-command")
 
+    @property
+    def _yolo(self) -> bool:
+        return self.query_one("#split-yolo", Switch).value
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.item is not None:
-            self.dismiss(event.item.name or "")
+        if event.item is None:
+            return
+        if event.item.name:
+            self.dismiss(("agent", event.item.name, self._yolo))
+        else:
+            self.dismiss(("shell", "", False))
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.value.strip():
-            self.dismiss(event.value.strip())
+            self.dismiss(("custom", event.value.strip(), False))
 
     def action_cancel(self) -> None:
         self.dismiss(None)

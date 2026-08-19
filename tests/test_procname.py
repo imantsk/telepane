@@ -58,3 +58,39 @@ def test_foreground_names_ps_failure(monkeypatch):
 
     monkeypatch.setattr(procname.subprocess, "run", boom)
     assert procname.foreground_names() == {}
+
+
+def test_bypass_flag_inferred_from_help(monkeypatch):
+    from telepane import agents
+
+    helps = {
+        "codex": "--dangerously-bypass-approvals-and-sandbox  skip approvals",
+        "claude": "--dangerously-skip-permissions  Bypass all permission checks",
+        "gemini": "-y, --yolo  Automatically accept all actions",
+        "plain": "--help only here",
+    }
+
+    class Out:
+        def __init__(self, text):
+            self.stdout = text
+            self.stderr = ""
+
+    monkeypatch.setattr(agents.subprocess, "run", lambda args, **kw: Out(helps.get(args[0], "")))
+    agents._flag_cache.clear()
+    assert agents.bypass_flag("codex") == "--dangerously-bypass-approvals-and-sandbox"
+    assert agents.bypass_flag("claude") == "--dangerously-skip-permissions"
+    assert agents.bypass_flag("gemini") == "--yolo"
+    assert agents.bypass_flag("plain") is None
+    agents._flag_cache.clear()
+
+
+def test_bypass_flag_swallows_failure(monkeypatch):
+    from telepane import agents
+
+    def boom(*a, **k):
+        raise OSError("gone")
+
+    monkeypatch.setattr(agents.subprocess, "run", boom)
+    agents._flag_cache.clear()
+    assert agents.bypass_flag("ghost") is None
+    agents._flag_cache.clear()
