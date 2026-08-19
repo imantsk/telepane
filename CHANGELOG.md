@@ -6,6 +6,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.11] - 2026-08-19
+
+- Update check frequency setting: presets 1d, 1h, 15m, and a custom hh:mm
+  input. A non-blank custom value selects the custom option automatically.
+- Strict validation on all settings fields, with a clear message on bad
+  input.
+- The dim palette Update entry runs a manual update check.
+
 ## [0.9.10] - 2026-08-19
 
 - Check for updates every hour, and when the app regains focus. The first
