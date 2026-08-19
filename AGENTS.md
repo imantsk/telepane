@@ -64,6 +64,7 @@ src/telepane/
   browser.py     argv-only browser boundary (link opening, browser discovery)
   procname.py    argv-only ps boundary (humanized pane command names)
   updates.py     update check (PyPI JSON) and argv pip upgrade
+  agents.py      agent CLI discovery and bypass-flag inference from --help
   styles.tcss    Textual CSS
 tests/           mirror src units; test_live.py gated by TELEPANE_LIVE_TESTS
 ```
