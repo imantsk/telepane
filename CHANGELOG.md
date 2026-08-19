@@ -6,6 +6,14 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-08-19
+
+- Humanize pane command names in the sidebar: the tree shows the callable
+  command (claude, copilot, opencode) instead of the kernel process name.
+  Toggle in Settings, default on.
+- Update notice next to the clock when PyPI has a newer version. Auto-update
+  through pip when the toggle is on. Both toggles default on.
+
 ## [0.9.6] - 2026-08-19
 
 - Shift+Click opens a previewed or raw markdown link in the browser. Only
