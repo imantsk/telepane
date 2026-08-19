@@ -84,7 +84,7 @@
     margin-left: 2;
 }
 
-TextPrompt, Confirm, Help {
+TextPrompt, Confirm, Help, SplitPrompt {
     align: center middle;
 }
 
@@ -197,10 +197,6 @@ TextPrompt, Confirm, Help {
 
 #split-agents {
     height: auto;
-    max-height: 10;
-    margin: 1 0;
-}
-
-#split-command {
-    margin-bottom: 1;
+    max-height: 6;
+    margin: 0 0 1 0;
 }

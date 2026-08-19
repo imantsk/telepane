@@ -435,3 +435,21 @@ async def test_plain_split_never_opens_picker(mocked, monkeypatch):
         await pilot.pause()
         assert not isinstance(app.screen, SplitPrompt)
     assert splits == [("%0", {"horizontal": True, "command": None})]
+
+
+@pytest.mark.asyncio
+async def test_split_picker_is_centered_and_compact(mocked, monkeypatch):
+    from telepane import agents
+
+    monkeypatch.setattr(agents, "installed", lambda: ["claude", "codex", "gemini"])
+    app = TelepaneApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        app.selected = NodeRef(KIND_PANE, "%0", "%0", "w.0")
+        app._picker_arm = "split_h"
+        app.action_split_h()
+        await pilot.pause()
+        dialog = app.screen.query_one("#dialog")
+        region = dialog.region
+        assert region.y > 2  # vertically centered, not docked to the top
+        assert abs((region.x + region.width // 2) - 50) <= 2  # horizontally centered
+        assert region.height <= 16

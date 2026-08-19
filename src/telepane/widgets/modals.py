@@ -83,9 +83,7 @@ class SplitPrompt(ModalScreen[Optional[str]]):
             items = [ListItem(Label(self.SHELL), name="")]
             items += [ListItem(Label(name), name=name) for name in agents.installed()]
             yield ListView(*items, id="split-agents")
-            yield Input(placeholder="custom command", id="split-command")
-            with Horizontal(classes="dialog-buttons"):
-                yield Button("Cancel", id="cancel")
+            yield Input(placeholder="custom command · esc cancels", id="split-command")
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.item is not None:
@@ -94,9 +92,6 @@ class SplitPrompt(ModalScreen[Optional[str]]):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.value.strip():
             self.dismiss(event.value.strip())
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(None)
 
     def action_cancel(self) -> None:
         self.dismiss(None)
