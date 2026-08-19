@@ -499,3 +499,26 @@ async def test_action_update_noop_when_current(mocked, monkeypatch):
         await pilot.pause()
     assert any("latest version" in n for n in notes)
     assert not app._update_ready
+
+
+@pytest.mark.asyncio
+async def test_rename_pane_targets_parent_window(mocked, monkeypatch):
+    from telepane import tmux as tmux_mod
+    from telepane.widgets.modals import TextPrompt
+
+    renames = []
+    monkeypatch.setattr(tmux_mod, "rename_window", lambda t, n: renames.append((t, n)))
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        app.selected = NodeRef(KIND_PANE, "%0", "%0", "w.0")
+        app.action_rename()
+        await pilot.pause()
+        assert isinstance(app.screen, TextPrompt)
+        box = app.screen.query_one("#prompt-input")
+        box.focus()
+        box.value = "renamed"
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+    assert renames == [("@0", "renamed")]

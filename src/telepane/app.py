@@ -86,8 +86,8 @@ class TelepaneApp(App[None]):
         Binding("p", "screenshot", "Screenshot"),
         Binding("comma", "settings", "Settings"),
         Binding("question_mark", "help", "Help"),
-        Binding("f", "focus_tree", "Tree"),
-        Binding("i", "focus_input", "Input"),
+        Binding("f", "focus_tree", "Tree", show=False),
+        Binding("i", "focus_input", "Input", show=False),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -101,6 +101,7 @@ class TelepaneApp(App[None]):
         self._stats_cache = ""
         self._home = home_dir()
         self._picker_arm: str | None = None
+        self._pane_window: dict[str, tuple[str, str]] = {}
         self._update_latest: str | None = None
         self._update_ready = False
 
@@ -276,6 +277,9 @@ class TelepaneApp(App[None]):
             struct = self._struct_sig(sessions)
             if force or struct != self._struct:
                 self._panes = {p.id: p for s in sessions for w in s.windows for p in w.panes}
+                self._pane_window = {
+                    p.id: (w.id, w.name) for s in sessions for w in s.windows for p in w.panes
+                }
                 if sessions:
                     build_tree(tree, sessions)
                 else:
@@ -444,25 +448,31 @@ class TelepaneApp(App[None]):
         self.push_screen(TextPrompt("New session name"), done)
 
     def action_rename(self) -> None:
+        """Rename the selected window, or the window of the selected pane."""
         ref = self.selected
-        if ref is None or ref.kind == KIND_PANE:
-            self.notify("Select a session or a window to rename.", severity="warning")
+        if ref is None:
+            self.notify("Select a window or a pane first.", severity="warning")
             return
+        if ref.kind == KIND_PANE:
+            found = self._pane_window.get(ref.target)
+            if found is None:
+                self.notify("Cannot find the window of this pane.", severity="warning")
+                return
+            window_id, window_name = found
+        else:
+            window_id, window_name = ref.target, ref.label
 
         def done(name: str | None) -> None:
             if not name:
                 return
             try:
-                if ref.kind == KIND_SESSION:
-                    tmux.rename_session(ref.target, name)
-                else:
-                    tmux.rename_window(ref.target, name)
+                tmux.rename_window(window_id, name)
             except tmux.TmuxError as exc:
                 self.notify(f"Cannot rename: {exc}", severity="error")
                 return
             self.refresh_data()
 
-        self.push_screen(TextPrompt(f"Rename {ref.kind}", ref.label), done)
+        self.push_screen(TextPrompt(f"Rename window {window_name}", window_name), done)
 
     def action_kill(self) -> None:
         ref = self.selected
