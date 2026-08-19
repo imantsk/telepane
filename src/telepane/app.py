@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -9,7 +11,7 @@ from textual.command import DiscoveryHit, Hit, Provider
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Footer, Header, Static, Tree
 
-from . import browser, screenshot, tmux
+from . import browser, procname, screenshot, tmux
 from .config import Config, home_dir
 from .widgets.info import render_server, render_target
 from .widgets.modals import Confirm, Help, TextPrompt
@@ -196,6 +198,8 @@ class TelepaneApp(App[None]):
     def _gather(self):
         """All blocking tmux reads for one refresh."""
         sessions = tmux.snapshot()
+        if self.config.humanize_commands:
+            self._humanize(sessions)
         info = tmux.server_info(sessions)
         preview = None
         if self.selected is not None:
@@ -204,6 +208,18 @@ class TelepaneApp(App[None]):
             except tmux.TmuxError:
                 preview = ""
         return sessions, info, preview
+
+    @staticmethod
+    def _humanize(sessions: list[tmux.Session]) -> None:
+        names = procname.foreground_names()
+        if not names:
+            return
+        for s in sessions:
+            for w in s.windows:
+                for i, p in enumerate(w.panes):
+                    name = names.get(p.tty)
+                    if name and name != p.command:
+                        w.panes[i] = replace(p, command=name)
 
     def refresh_data(self) -> None:
         try:

@@ -72,6 +72,7 @@ class Pane:
     pid: int
     width: int
     height: int
+    tty: str = ""
 
     @property
     def target(self) -> str:
@@ -143,6 +144,7 @@ _PANE_FMT = _UNIT.join(
         "#{pane_pid}",
         "#{pane_width}",
         "#{pane_height}",
+        "#{pane_tty}",
     ]
 )
 
@@ -174,6 +176,7 @@ def list_panes(window_target: str) -> list[Pane]:
                 pid=_int(r[6]),
                 width=_int(r[7]),
                 height=_int(r[8]),
+                tty=r[9] if len(r) > 9 else "",
             )
         )
     return panes
@@ -246,6 +249,7 @@ _SNAPSHOT_FMT = _UNIT.join(
         "#{pane_pid}",
         "#{pane_width}",
         "#{pane_height}",
+        "#{pane_tty}",
     ]
 )
 
@@ -298,6 +302,7 @@ def snapshot() -> list[Session]:
                 pid=_int(r[19]),
                 width=_int(r[20]),
                 height=_int(r[21]),
+                tty=r[22] if len(r) > 22 else "",
             )
         )
     result: list[Session] = []

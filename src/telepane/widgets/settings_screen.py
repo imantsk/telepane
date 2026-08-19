@@ -148,6 +148,12 @@ class SettingsScreen(Screen):
             lambda v: self._set_cfg("md_highlight", v),
         )
         yield self._bool(
+            "humanize_commands",
+            "Humanize pane commands",
+            c.humanize_commands,
+            lambda v: self._set_cfg("humanize_commands", v),
+        )
+        yield self._bool(
             "open_links",
             "Shift+Click opens links",
             c.open_links,
