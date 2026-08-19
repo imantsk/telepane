@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import replace
 
 from rich.text import Text
@@ -31,7 +32,8 @@ from .widgets.tree import (
 _MIN_SIDEBAR = 20
 _MIN_SEND = 6
 _SEND_MAX = 100_000
-_UPDATE_INTERVAL = 6 * 3600
+_UPDATE_INTERVAL = 3600
+_UPDATE_MIN_GAP = 600.0
 
 
 class _MenuCommands(Provider):
@@ -104,6 +106,7 @@ class TelepaneApp(App[None]):
         self._pane_window: dict[str, tuple[str, str]] = {}
         self._update_latest: str | None = None
         self._update_ready = False
+        self._update_checked_at = 0.0
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -194,6 +197,8 @@ class TelepaneApp(App[None]):
         if hasattr(self, "_timer"):
             self._timer.resume()
             self._tick()
+        if time.monotonic() - self._update_checked_at > _UPDATE_MIN_GAP:
+            self._check_updates()
 
     def on_resizer_committed(self, event: Resizer.Committed) -> None:
         if event.key == "sidebar":
@@ -377,6 +382,7 @@ class TelepaneApp(App[None]):
     def _check_updates(self) -> None:
         if not self.config.update_check:
             return
+        self._update_checked_at = time.monotonic()
         latest = updates.latest_version()
         if latest is None or not updates.is_newer(latest, __version__):
             return

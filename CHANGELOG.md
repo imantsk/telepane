@@ -6,6 +6,11 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.10] - 2026-08-19
+
+- Check for updates every hour, and when the app regains focus. The first
+  check after a release now lands within the hour, not within six.
+
 ## [0.9.9] - 2026-08-19
 
 - Shift+Click a split key to pick what runs in the new pane: an installed

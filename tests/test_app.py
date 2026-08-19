@@ -585,3 +585,27 @@ async def test_split_custom_path_overrides_pane_path(mocked, monkeypatch):
                 break
             await pilot.pause(0.05)
     assert splits == [("%0", {"horizontal": True, "command": None, "start_dir": "/work"})]
+
+
+@pytest.mark.asyncio
+async def test_focus_triggers_stale_update_check(mocked, monkeypatch):
+    from textual.events import AppFocus
+
+    from telepane import updates
+
+    calls = []
+    monkeypatch.setattr(updates, "latest_version", lambda: calls.append(1) or None)
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        for _ in range(20):
+            if calls:
+                break
+            await pilot.pause(0.05)
+        boot_calls = len(calls)
+        app._update_checked_at = -10_000.0
+        app.on_app_focus(AppFocus())
+        for _ in range(20):
+            if len(calls) > boot_calls:
+                break
+            await pilot.pause(0.05)
+    assert len(calls) > boot_calls
