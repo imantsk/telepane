@@ -359,3 +359,15 @@ async def test_no_notice_when_check_disabled(mocked, monkeypatch):
     async with app.run_test() as pilot:
         await pilot.pause(0.3)
         assert not app.query("#update-notice")
+
+
+@pytest.mark.asyncio
+async def test_settings_shows_version(mocked):
+    from telepane import __version__
+
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        app.action_settings()
+        await pilot.pause()
+        label = app.screen.query_one("#settings-version")
+        assert __version__ in str(label.render())

@@ -10,7 +10,7 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, ListItem, ListView, RadioButton, RadioSet, Switch
 
-from .. import browser, tmux
+from .. import __version__, browser, tmux
 from ..config import Config
 from ..tmux_schema import CATEGORIES, COLORS, CUSTOM, PROFILES, Opt
 
@@ -42,6 +42,7 @@ class SettingsScreen(Screen):
             items = [ListItem(Label(s), name=s) for s in self._sections()]
             yield ListView(*items, id="settings-nav")
             yield VerticalScroll(id="settings-fields")
+        yield Label(f"telepane {__version__}", id="settings-version")
 
     def _sections(self) -> list[str]:
         return [*_APP_SUBSECTIONS, *CATEGORIES.keys()]
