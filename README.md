@@ -98,6 +98,9 @@ $ telepane -v  # version
   as rules with the language tag. Bold, italic, links, and headings render
   styled with their markers hidden. The cursor line and broken syntax show raw
   text.
+- **Shift+Click** a split key in the footer to pick what runs in the new
+  pane: an installed agent CLI (claude, codex, gemini, ...) or a custom
+  command.
 - **Shift+Click** a link to open it in your browser. Pick the browser in
   Settings (system default, or any installed browser). The toggle
   "Shift+Click opens links" turns the feature off.

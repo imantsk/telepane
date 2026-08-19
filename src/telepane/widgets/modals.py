@@ -7,7 +7,9 @@ from typing import Optional
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label
+from textual.widgets import Button, Input, Label, ListItem, ListView
+
+from .. import agents
 
 
 class TextPrompt(ModalScreen[Optional[str]]):
@@ -61,6 +63,43 @@ class Confirm(ModalScreen[bool]):
 
     def action_no(self) -> None:
         self.dismiss(False)
+
+
+class SplitPrompt(ModalScreen[Optional[str]]):
+    """Pick what runs in the new pane: the shell, an installed agent CLI, or a
+    custom command. Dismisses with the command string ("" = shell), or None."""
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+    SHELL = "shell (default)"
+
+    def __init__(self, *, horizontal: bool) -> None:
+        super().__init__()
+        self._horizontal = horizontal
+
+    def compose(self) -> ComposeResult:
+        arrow = "→" if self._horizontal else "↓"
+        with Vertical(id="dialog"):
+            yield Label(f"Split {arrow} and run", classes="dialog-title")
+            items = [ListItem(Label(self.SHELL), name="")]
+            items += [ListItem(Label(name), name=name) for name in agents.installed()]
+            yield ListView(*items, id="split-agents")
+            yield Input(placeholder="custom command", id="split-command")
+            with Horizontal(classes="dialog-buttons"):
+                yield Button("Cancel", id="cancel")
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.item is not None:
+            self.dismiss(event.item.name or "")
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.value.strip():
+            self.dismiss(event.value.strip())
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(None)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
 
 
 class Help(ModalScreen[None]):

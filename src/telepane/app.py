@@ -14,7 +14,7 @@ from textual.widgets import Footer, Header, Static, Tree
 from . import __version__, browser, procname, screenshot, tmux, updates
 from .config import Config, home_dir
 from .widgets.info import render_server, render_target
-from .widgets.modals import Confirm, Help, TextPrompt
+from .widgets.modals import Confirm, Help, SplitPrompt, TextPrompt
 from .widgets.resizer import Resizer
 from .widgets.send_box import MessageArea, SendBox
 from .widgets.settings_screen import SettingsScreen
@@ -87,6 +87,7 @@ class TelepaneApp(App[None]):
         self._sizes: tuple = ()
         self._stats_cache = ""
         self._home = home_dir()
+        self._picker_arm: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -152,6 +153,18 @@ class TelepaneApp(App[None]):
             return
         height = max(_MIN_SEND, min(self.config.send_height, resizer.max_height()))
         resizer.apply_height(height)
+
+    def on_mouse_down(self, event) -> None:
+        if not getattr(event, "shift", False):
+            return
+        action = getattr(self.mouse_over, "action", None)
+        if action in ("split_h", "split_v"):
+            self._picker_arm = action
+
+    def _consume_picker(self, action: str) -> bool:
+        armed = self._picker_arm == action
+        self._picker_arm = None
+        return armed
 
     def on_resize(self, event) -> None:
         self._clamp_sidebar()
@@ -447,21 +460,39 @@ class TelepaneApp(App[None]):
         else:
             do_kill()
 
-    def _split(self, horizontal: bool) -> None:
+    def _split(self, horizontal: bool, command: str | None = None) -> None:
         if self.selected is None:
             self.notify("No target is selected.", severity="warning")
             return
         try:
-            tmux.split_window(self.selected.send_target, horizontal=horizontal)
+            tmux.split_window(self.selected.send_target, horizontal=horizontal, command=command)
         except tmux.TmuxError as exc:
             self.notify(f"Cannot split: {exc}", severity="error")
             return
         self.refresh_data()
 
+    def _split_picker(self, horizontal: bool) -> None:
+        if self.selected is None:
+            self.notify("No target is selected.", severity="warning")
+            return
+
+        def done(command: str | None) -> None:
+            if command is None:
+                return
+            self._split(horizontal, command=command or None)
+
+        self.push_screen(SplitPrompt(horizontal=horizontal), done)
+
     def action_split_h(self) -> None:
+        if self._consume_picker("split_h"):
+            self._split_picker(horizontal=True)
+            return
         self._split(horizontal=True)
 
     def action_split_v(self) -> None:
+        if self._consume_picker("split_v"):
+            self._split_picker(horizontal=False)
+            return
         self._split(horizontal=False)
 
     def action_settings(self) -> None:

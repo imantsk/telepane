@@ -108,3 +108,13 @@ def test_run_raises_on_failure(monkeypatch):
 def test_run_swallows_failure_when_unchecked(monkeypatch):
     monkeypatch.setattr(tmux.subprocess, "run", lambda args, **kw: Dummy("", 1, "boom"))
     assert tmux._run(["list-sessions"], check=False) == ""
+
+
+def test_split_window_with_command(monkeypatch):
+    calls = []
+    monkeypatch.setattr(tmux.subprocess, "run", lambda args, **kw: calls.append(args) or Dummy(""))
+    tmux.split_window("%3", horizontal=True, command="codex")
+    assert calls == [["tmux", "split-window", "-h", "-t", "%3", "codex"]]
+    calls.clear()
+    tmux.split_window("%3", horizontal=False)
+    assert calls == [["tmux", "split-window", "-v", "-t", "%3"]]

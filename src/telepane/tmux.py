@@ -456,8 +456,11 @@ def rename_window(window_target: str, new_name: str) -> None:
     _run(["rename-window", "-t", window_target, new_name])
 
 
-def split_window(pane_target: str, *, horizontal: bool = False) -> None:
-    _run(["split-window", "-h" if horizontal else "-v", "-t", pane_target])
+def split_window(pane_target: str, *, horizontal: bool = False, command: str | None = None) -> None:
+    args = ["split-window", "-h" if horizontal else "-v", "-t", pane_target]
+    if command:
+        args.append(command)
+    _run(args)
 
 
 def kill_pane(pane_target: str) -> None:

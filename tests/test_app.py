@@ -371,3 +371,67 @@ async def test_settings_shows_version(mocked):
         await pilot.pause()
         label = app.screen.query_one("#settings-version")
         assert __version__ in str(label.render())
+
+
+@pytest.mark.asyncio
+async def test_shift_split_opens_picker_and_runs_agent(mocked, monkeypatch):
+    from telepane import agents
+    from telepane import tmux as tmux_mod
+    from telepane.widgets.modals import SplitPrompt
+
+    splits = []
+    monkeypatch.setattr(tmux_mod, "split_window", lambda t, **kw: splits.append((t, kw)))
+    monkeypatch.setattr(agents, "installed", lambda: ["codex", "claude"])
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        app.selected = NodeRef(KIND_PANE, "%0", "%0", "w.0")
+        app._picker_arm = "split_h"
+        app.action_split_h()
+        await pilot.pause()
+        assert isinstance(app.screen, SplitPrompt)
+        lv = app.screen.query_one("#split-agents")
+        lv.index = 1  # codex
+        lv.action_select_cursor()
+        await pilot.pause()
+    assert splits == [("%0", {"horizontal": True, "command": "codex"})]
+
+
+@pytest.mark.asyncio
+async def test_shift_split_custom_command(mocked, monkeypatch):
+    from telepane import agents
+    from telepane import tmux as tmux_mod
+    from telepane.widgets.modals import SplitPrompt
+
+    splits = []
+    monkeypatch.setattr(tmux_mod, "split_window", lambda t, **kw: splits.append((t, kw)))
+    monkeypatch.setattr(agents, "installed", lambda: [])
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        app.selected = NodeRef(KIND_PANE, "%0", "%0", "w.0")
+        app._picker_arm = "split_v"
+        app.action_split_v()
+        await pilot.pause()
+        assert isinstance(app.screen, SplitPrompt)
+        box = app.screen.query_one("#split-command")
+        box.focus()
+        box.value = "htop"
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+    assert splits == [("%0", {"horizontal": False, "command": "htop"})]
+
+
+@pytest.mark.asyncio
+async def test_plain_split_never_opens_picker(mocked, monkeypatch):
+    from telepane import tmux as tmux_mod
+    from telepane.widgets.modals import SplitPrompt
+
+    splits = []
+    monkeypatch.setattr(tmux_mod, "split_window", lambda t, **kw: splits.append((t, kw)))
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        app.selected = NodeRef(KIND_PANE, "%0", "%0", "w.0")
+        app.action_split_h()
+        await pilot.pause()
+        assert not isinstance(app.screen, SplitPrompt)
+    assert splits == [("%0", {"horizontal": True, "command": None})]

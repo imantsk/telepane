@@ -194,3 +194,13 @@ TextPrompt, Confirm, Help {
     padding: 0 2 0 0;
     color: $text-muted;
 }
+
+#split-agents {
+    height: auto;
+    max-height: 10;
+    margin: 1 0;
+}
+
+#split-command {
+    margin-bottom: 1;
+}
