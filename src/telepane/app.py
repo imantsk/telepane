@@ -48,7 +48,7 @@ class _MenuCommands(Provider):
             update_help = "Install the new version"
         else:
             update_title = Text("Update", style="dim")
-            update_help = "No update available"
+            update_help = f"Already on latest: v{__version__}"
         return [
             ("Settings", "Open settings", app.action_settings),
             ("Screenshot", "Take a screenshot", app.action_screenshot),
