@@ -6,6 +6,10 @@ semantic versioning.
 
 ## [Unreleased]
 
+## [0.9.8] - 2026-08-19
+
+- Show the version in the settings footer.
+
 ## [0.9.7] - 2026-08-19
 
 - Humanize pane command names in the sidebar: the tree shows the callable
