@@ -62,6 +62,7 @@ src/telepane/
   widgets/       tree.py, send_box.py, md_render.py, info.py, modals.py. UI only
   clipboard.py   argv-only clipboard boundary
   browser.py     argv-only browser boundary (link opening, browser discovery)
+  procname.py    argv-only ps boundary (humanized pane command names)
   styles.tcss    Textual CSS
 tests/           mirror src units; test_live.py gated by TELEPANE_LIVE_TESTS
 ```
@@ -109,8 +110,8 @@ persist secrets (this tool has none. Keep it that way).
 
 - **The tmux seam**: every tmux call is `tmux._run([...])`. Callers use the
   typed helpers in `tmux.py`. The only other subprocess boundaries are
-  `clipboard.py` and `browser.py`, argv-only like the tmux seam. No other
-  module imports `subprocess`.
+  `clipboard.py`, `browser.py`, and `procname.py`, argv-only like the tmux
+  seam. No other module imports `subprocess`.
 - **Id targeting**: see Rule 1.
 - **UI holds no tmux logic**: `widgets/` render and emit messages; `app.py`
   translates messages into `tmux` calls.
