@@ -39,6 +39,8 @@ class Config:
     theme: str = "textual-dark"
     browser: str = ""
     open_links: bool = True
+    update_check: bool = True
+    auto_update: bool = True
     screenshot_format: str = "svg"
     screenshot_save_file: bool = True
     screenshot_clipboard: bool = True

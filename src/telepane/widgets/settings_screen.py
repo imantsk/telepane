@@ -159,6 +159,18 @@ class SettingsScreen(Screen):
             c.open_links,
             lambda v: self._set_cfg("open_links", v),
         )
+        yield self._bool(
+            "update_check",
+            "Check for updates",
+            c.update_check,
+            lambda v: self._set_cfg("update_check", v),
+        )
+        yield self._bool(
+            "auto_update",
+            "Auto update",
+            c.auto_update,
+            lambda v: self._set_cfg("auto_update", v),
+        )
         yield self._textnum(
             "poll_interval",
             "Refresh interval (s)",
