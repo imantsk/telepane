@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -38,9 +39,20 @@ class _MenuCommands(Provider):
 
     def _items(self):
         app = self.screen.app
+        latest = app._update_latest
+        if app._update_ready:
+            update_title: object = f"Update · {latest} ready"
+            update_help = "Restart telepane to apply"
+        elif latest:
+            update_title = f"Update to {latest}"
+            update_help = "Install the new version"
+        else:
+            update_title = Text("Update", style="dim")
+            update_help = "No update available"
         return [
             ("Settings", "Open settings", app.action_settings),
             ("Screenshot", "Take a screenshot", app.action_screenshot),
+            (update_title, update_help, app.action_update),
             ("Help", "Show key bindings", app.action_help),
             ("Quit", "Quit Telepane", app.action_quit),
         ]
@@ -52,9 +64,10 @@ class _MenuCommands(Provider):
     async def search(self, query: str):
         matcher = self.matcher(query)
         for title, help_, callback in self._items():
-            score = matcher.match(title)
+            text = title if isinstance(title, str) else title.plain
+            score = matcher.match(text)
             if score > 0:
-                yield Hit(score, matcher.highlight(title), callback, help=help_)
+                yield Hit(score, matcher.highlight(text), callback, help=help_)
 
 
 class TelepaneApp(App[None]):
@@ -88,6 +101,8 @@ class TelepaneApp(App[None]):
         self._stats_cache = ""
         self._home = home_dir()
         self._picker_arm: str | None = None
+        self._update_latest: str | None = None
+        self._update_ready = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -361,16 +376,35 @@ class TelepaneApp(App[None]):
         latest = updates.latest_version()
         if latest is None or not updates.is_newer(latest, __version__):
             return
+        self._update_latest = latest
         self.call_from_thread(self._show_update_notice, f"⬆ {latest}")
         if not self.config.auto_update:
             return
+        self._install(latest)
+
+    def _install(self, latest: str) -> None:
         if updates.upgrade():
+            self._update_ready = True
             self.call_from_thread(self._show_update_notice, f"⬆ {latest} ready · restart")
             self.call_from_thread(self.notify, f"Updated to {latest}. Restart telepane.")
         else:
             self.call_from_thread(
                 self.notify, f"Cannot auto-update to {latest}.", severity="warning"
             )
+
+    @work(thread=True)
+    def _install_worker(self, latest: str) -> None:
+        self._install(latest)
+
+    def action_update(self) -> None:
+        if self._update_ready:
+            self.notify(f"{self._update_latest} is installed. Restart telepane.")
+            return
+        if self._update_latest:
+            self.notify(f"Updating to {self._update_latest}...")
+            self._install_worker(self._update_latest)
+            return
+        self.notify(f"telepane {__version__} is the latest version.")
 
     def _show_update_notice(self, text: str) -> None:
         header = self.query_one(Header)

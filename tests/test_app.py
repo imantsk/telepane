@@ -453,3 +453,49 @@ async def test_split_picker_is_centered_and_compact(mocked, monkeypatch):
         assert region.y > 2  # vertically centered, not docked to the top
         assert abs((region.x + region.width // 2) - 50) <= 2  # horizontally centered
         assert region.height <= 16
+
+
+@pytest.mark.asyncio
+async def test_palette_update_entry_states(mocked):
+    from telepane.app import _MenuCommands
+
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        provider = _MenuCommands(app.screen)
+        titles = [t if isinstance(t, str) else t.plain for t, _, _ in provider._items()]
+        assert "Update" in titles  # dim plain-text form when no update exists
+        app._update_latest = "9.9.9"
+        titles = [t if isinstance(t, str) else t.plain for t, _, _ in provider._items()]
+        assert "Update to 9.9.9" in titles
+        app._update_ready = True
+        titles = [t if isinstance(t, str) else t.plain for t, _, _ in provider._items()]
+        assert "Update · 9.9.9 ready" in titles
+
+
+@pytest.mark.asyncio
+async def test_action_update_installs_when_available(mocked, monkeypatch):
+    from telepane import updates
+
+    monkeypatch.setattr(updates, "upgrade", lambda: True)
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        app._update_latest = "9.9.9"
+        app.action_update()
+        for _ in range(40):
+            if app._update_ready:
+                break
+            await pilot.pause(0.05)
+        assert app._update_ready
+
+
+@pytest.mark.asyncio
+async def test_action_update_noop_when_current(mocked, monkeypatch):
+    notes = []
+    app = TelepaneApp()
+    async with app.run_test() as pilot:
+        monkeypatch.setattr(app, "notify", lambda msg, **kw: notes.append(msg))
+        app.action_update()
+        await pilot.pause()
+    assert any("latest version" in n for n in notes)
+    assert not app._update_ready
