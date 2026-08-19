@@ -118,3 +118,10 @@ def test_split_window_with_command(monkeypatch):
     calls.clear()
     tmux.split_window("%3", horizontal=False)
     assert calls == [["tmux", "split-window", "-v", "-t", "%3"]]
+
+
+def test_split_window_with_start_dir(monkeypatch):
+    calls = []
+    monkeypatch.setattr(tmux.subprocess, "run", lambda args, **kw: calls.append(args) or Dummy(""))
+    tmux.split_window("%3", horizontal=True, command="codex", start_dir="/work")
+    assert calls == [["tmux", "split-window", "-h", "-t", "%3", "-c", "/work", "codex"]]

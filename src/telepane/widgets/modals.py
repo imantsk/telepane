@@ -10,6 +10,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, ListItem, ListView, Switch
 
 from .. import agents
+from .path_input import PathInput
 
 
 class TextPrompt(ModalScreen[Optional[str]]):
@@ -67,15 +68,18 @@ class Confirm(ModalScreen[bool]):
 
 class SplitPrompt(ModalScreen[Optional[tuple]]):
     """Pick what runs in the new pane: the shell, an installed agent CLI, or a
-    custom command. Dismisses with (kind, value, yolo): kind is "shell",
-    "agent", or "custom". yolo asks for the agent's approval-bypass flag."""
+    custom command. Dismisses with (kind, value, yolo, path): kind is "shell",
+    "agent", or "custom". yolo asks for the agent's approval-bypass flag; path
+    is the working directory for the new pane."""
 
     BINDINGS = [("escape", "cancel", "Cancel")]
     SHELL = "shell (default)"
 
-    def __init__(self, *, horizontal: bool) -> None:
+    def __init__(self, *, horizontal: bool, path: str = "", home: str = "") -> None:
         super().__init__()
         self._horizontal = horizontal
+        self._path = path
+        self._home = home
 
     def compose(self) -> ComposeResult:
         arrow = "→" if self._horizontal else "↓"
@@ -87,23 +91,38 @@ class SplitPrompt(ModalScreen[Optional[tuple]]):
             with Horizontal(id="split-yolo-row"):
                 yield Switch(value=True, id="split-yolo")
                 yield Label("yolo (skip approvals)")
+            yield PathInput(
+                value=self._path,
+                home=self._home,
+                placeholder="working directory · tab completes",
+                id="split-path",
+            )
             yield Input(placeholder="custom command · esc cancels", id="split-command")
 
     @property
     def _yolo(self) -> bool:
         return self.query_one("#split-yolo", Switch).value
 
+    @property
+    def _dir(self) -> str:
+        value = self.query_one("#split-path", PathInput).value.strip()
+        if value.startswith("~") and self._home:
+            value = value.replace("~", self._home, 1)
+        return value or self._path
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.item is None:
             return
         if event.item.name:
-            self.dismiss(("agent", event.item.name, self._yolo))
+            self.dismiss(("agent", event.item.name, self._yolo, self._dir))
         else:
-            self.dismiss(("shell", "", False))
+            self.dismiss(("shell", "", False, self._dir))
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "split-path":
+            return
         if event.value.strip():
-            self.dismiss(("custom", event.value.strip(), False))
+            self.dismiss(("custom", event.value.strip(), False, self._dir))
 
     def action_cancel(self) -> None:
         self.dismiss(None)

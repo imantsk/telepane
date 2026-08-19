@@ -456,8 +456,16 @@ def rename_window(window_target: str, new_name: str) -> None:
     _run(["rename-window", "-t", window_target, new_name])
 
 
-def split_window(pane_target: str, *, horizontal: bool = False, command: str | None = None) -> None:
+def split_window(
+    pane_target: str,
+    *,
+    horizontal: bool = False,
+    command: str | None = None,
+    start_dir: str | None = None,
+) -> None:
     args = ["split-window", "-h" if horizontal else "-v", "-t", pane_target]
+    if start_dir:
+        args += ["-c", start_dir]
     if command:
         args.append(command)
     _run(args)

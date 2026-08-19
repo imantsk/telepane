@@ -504,12 +504,25 @@ class TelepaneApp(App[None]):
         else:
             do_kill()
 
-    def _split(self, horizontal: bool, command: str | None = None) -> None:
+    def _target_path(self) -> str:
+        if self.selected is None:
+            return ""
+        pane = self._panes.get(self.selected.send_target)
+        return pane.path if pane else ""
+
+    def _split(
+        self, horizontal: bool, command: str | None = None, start_dir: str | None = None
+    ) -> None:
         if self.selected is None:
             self.notify("No target is selected.", severity="warning")
             return
         try:
-            tmux.split_window(self.selected.send_target, horizontal=horizontal, command=command)
+            tmux.split_window(
+                self.selected.send_target,
+                horizontal=horizontal,
+                command=command,
+                start_dir=start_dir or self._target_path() or None,
+            )
         except tmux.TmuxError as exc:
             self.notify(f"Cannot split: {exc}", severity="error")
             return
@@ -523,22 +536,24 @@ class TelepaneApp(App[None]):
         def done(result: tuple | None) -> None:
             if result is None:
                 return
-            kind, value, yolo = result
+            kind, value, yolo, path = result
             if kind == "agent":
-                self._split_agent(value, horizontal=horizontal, yolo=yolo)
+                self._split_agent(value, horizontal=horizontal, yolo=yolo, start_dir=path)
             else:
-                self._split(horizontal, command=value or None)
+                self._split(horizontal, command=value or None, start_dir=path)
 
-        self.push_screen(SplitPrompt(horizontal=horizontal), done)
+        self.push_screen(
+            SplitPrompt(horizontal=horizontal, path=self._target_path(), home=self._home), done
+        )
 
     @work(thread=True)
-    def _split_agent(self, name: str, *, horizontal: bool, yolo: bool) -> None:
+    def _split_agent(self, name: str, *, horizontal: bool, yolo: bool, start_dir: str) -> None:
         command = name
         if yolo:
             flag = agents.bypass_flag(name)
             if flag:
                 command = f"{name} {flag}"
-        self.call_from_thread(self._split, horizontal, command)
+        self.call_from_thread(self._split, horizontal, command, start_dir)
 
     def action_split_h(self) -> None:
         if self._consume_picker("split_h"):
